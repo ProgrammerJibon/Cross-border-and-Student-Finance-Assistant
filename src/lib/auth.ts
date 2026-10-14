@@ -1,0 +1,28 @@
+import "server-only";
+import { rows } from "./db";
+import { sessionPayload } from "./session";
+import { AppError } from "./errors";
+import type { Role, User } from "@/types";
+import { hasPermission, type AdminSection } from "./admin-permissions";
+export async function currentUser(): Promise<User | null> {
+  const p = await sessionPayload();
+  if (!p?.sub) return null;
+  const [u] = await rows<User & { status: string }>(
+    "SELECT u.id,u.name,u.email,u.role,u.status,u.session_version,u.is_demo,u.onboarded,u.avatar,u.admin_permissions,p.country_code,p.ai_model_id,p.language,p.theme,p.preferred_currency,p.timezone,p.notifications,p.auto_alerts FROM users u JOIN user_preferences p ON p.user_id=u.id WHERE u.id=?",
+    [p.sub],
+  );
+  return u && u.status === "ACTIVE" && u.session_version === p.version
+    ? u
+    : null;
+}
+export async function requireAdmin(section: AdminSection) {
+  const user = await requireUser();
+  if (!hasPermission(user, section)) throw new AppError("FORBIDDEN");
+  return user;
+}
+export async function requireUser(role?: Role) {
+  const u = await currentUser();
+  if (!u) throw new AppError("UNAUTHORIZED");
+  if (role && u.role !== role) throw new AppError("FORBIDDEN");
+  return u;
+}
