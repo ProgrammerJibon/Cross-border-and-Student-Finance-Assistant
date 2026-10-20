@@ -13,7 +13,7 @@ const db = await mysql.createConnection({
   dateStrings: true,
 });
 await db.query("SET time_zone = '+00:00'");
-for (const file of ["schema.sql", "seed.sql", "demo-data.sql"]) {
+for (const file of ["schema.sql", "seed.sql"]) {
   await db.query(await readFile(resolve("database", file), "utf8"));
   console.log("Imported", file);
 }

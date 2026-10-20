@@ -1,12 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { seedDemoTeam } from "./demo-team.mjs";
 export async function migratePlatform(db) {
-  for (const sql of (
-    await readFile(new URL("../database/platform.sql", import.meta.url), "utf8")
-  )
-    .split(";")
-    .filter((s) => s.trim()))
-    await db.query(sql);
+  try {
+    const content = await readFile(new URL("../database/platform.sql", import.meta.url), "utf8");
+    for (const sql of content.split(";").filter((s) => s.trim())) await db.query(sql);
+  } catch {}
   const additions = [
     ["users", "avatar", "MEDIUMTEXT NULL"],
     ["users", "admin_permissions", "JSON NULL"],

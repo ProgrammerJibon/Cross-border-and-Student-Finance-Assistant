@@ -57,7 +57,7 @@ npm run dev
 
 Open [the local demo](http://127.0.0.1:3000/en/demo). The development server binds to loopback.
 
-`db:setup` imports `schema.sql`, `seed.sql` and `demo-data.sql`, then applies additive migrations. Seed inserts use `INSERT IGNORE`; rerunning setup does not reset existing demo balances, dates or subscriptions. Use a separate database for a fresh scenario. `scripts/generate-demo.mjs` regenerates the demo SQL file, not live database records.
+`db:setup` imports `schema.sql` and `seed.sql`, then applies additive migrations. Seed inserts use `INSERT IGNORE`; rerunning setup does not reset existing demo balances, dates or subscriptions. Use a separate database for a fresh scenario. `scripts/generate-demo.mjs` regenerates the seed SQL file, not live database records.
 
 For an existing populated project, apply only new migrations:
 

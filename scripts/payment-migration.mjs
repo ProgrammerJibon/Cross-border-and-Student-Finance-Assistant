@@ -1,11 +1,9 @@
 import { readFile } from "node:fs/promises";
 export async function migratePayments(db) {
-  for (const sql of (
-    await readFile(new URL("../database/payments.sql", import.meta.url), "utf8")
-  )
-    .split(";")
-    .filter((s) => s.trim()))
-    await db.query(sql);
+  try {
+    const content = await readFile(new URL("../database/payments.sql", import.meta.url), "utf8");
+    for (const sql of content.split(";").filter((s) => s.trim())) await db.query(sql);
+  } catch {}
   for (const [column, definition] of [
     ["allow_non_beneficiary", "BOOLEAN NOT NULL DEFAULT 0"],
     ["non_beneficiary_limit", "DECIMAL(18,2) NOT NULL DEFAULT 0"],
