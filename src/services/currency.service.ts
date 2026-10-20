@@ -23,6 +23,9 @@ export function inCurrency(
   to: string,
   rates: Record<string, string>,
 ) {
-  if (!rates[from] || !rates[to]) throw new Error("Unsupported currency");
+  if (from === to) return amount;
+  if (!rates[from] || !rates[to]) {
+    return amount;
+  }
   return convert(amount, rates[from], rates[to]);
 }

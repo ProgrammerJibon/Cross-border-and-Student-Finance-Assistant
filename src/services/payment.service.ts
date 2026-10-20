@@ -1,3 +1,4 @@
+import { parseJson } from "@/lib/json";
 import { getRiskPolicy } from "./financial-config.service";
 import "server-only";
 import { randomUUID } from "node:crypto";
@@ -187,7 +188,7 @@ async function parentRequirements(r: Request, db: DB) {
       [],
       db,
     );
-    const cap = setting ? JSON.parse(setting.value).nonBeneficiaryRmb : "1000";
+    const cap = setting ? parseJson<{ nonBeneficiaryRmb?: string }>(setting.value, {}).nonBeneficiaryRmb || "1000" : "1000";
     requireCondition(
       D(inCurrency(r.amount, r.currency, "CNY", rates)).lte(cap),
       "NON_BENEFICIARY_LIMIT",

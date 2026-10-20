@@ -1,3 +1,5 @@
+import { parseJson } from "@/lib/json";
+
 export const adminSections = [
   "users",
   "plans",
@@ -21,7 +23,7 @@ export function hasPermission(
   if (user.role === "ADMIN") return true;
   if (user.role !== "MODERATOR") return false;
   try {
-    const permissions = JSON.parse(user.admin_permissions || "[]");
+    const permissions = parseJson<string[]>(user.admin_permissions, []);
     return Array.isArray(permissions) && permissions.includes(section);
   } catch {
     return false;

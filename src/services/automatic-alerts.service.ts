@@ -5,6 +5,7 @@ import { notify } from "@/lib/audit";
 import { D } from "@/lib/money";
 import { getRates, inCurrency } from "./currency.service";
 import { tuitionGap } from "./tuition.service";
+import { parseJson } from "@/lib/json";
 type Condition = {
   key: string;
   type: string;
@@ -124,7 +125,7 @@ async function conditions(userId: string, db: DB): Promise<Condition[]> {
       severity: "WARNING",
     });
   if (subscription) {
-    const limits = JSON.parse(subscription.limits) as Record<string, number>;
+    const limits = parseJson<Record<string, number>>(subscription.limits, {});
     const usage = await rows<{ feature: string; used: number }>(
       "SELECT feature,used FROM usage_counters WHERE user_id=? AND period=DATE_FORMAT(UTC_DATE(),'%Y-%m')",
       [userId],
@@ -182,7 +183,7 @@ export async function syncAutomaticAlerts(userId: string) {
         db,
       );
       for (const f of family) {
-        const visibility = JSON.parse(f.visibility);
+        const visibility = parseJson<Record<string, boolean>>(f.visibility, {});
         for (const c of await conditions(f.student_id, db))
           if (c.visibility && visibility[c.visibility])
             desired.push({

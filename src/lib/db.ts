@@ -1,4 +1,5 @@
 import "server-only";
+import "./env";
 import mysql, {
   type PoolConnection,
   type RowDataPacket,
@@ -20,6 +21,12 @@ export const pool =
     decimalNumbers: false,
     multipleStatements: false,
     charset: "utf8mb4",
+    typeCast: function (field, next) {
+      if (field.type === "JSON") {
+        return field.string();
+      }
+      return next();
+    },
   });
 if (!globalDb.dbPool) {
   pool.on("connection", (connection) => {

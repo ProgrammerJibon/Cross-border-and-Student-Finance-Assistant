@@ -1,4 +1,5 @@
 import { getRates, inCurrency } from "@/services/currency.service";
+import { parseJson } from "@/lib/json";
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -64,7 +65,7 @@ export async function proposeAgentAction(
     (definition.roles as readonly string[]).includes(actor.role),
     "FORBIDDEN",
   );
-  const args = definition.schema.parse(JSON.parse(v.input_json));
+  const args = definition.schema.parse(parseJson(v.input_json, {}));
   const serialized = JSON.stringify(args);
   const hash = createHash("sha256")
     .update(v.action + serialized)
@@ -144,7 +145,7 @@ export async function agentWorkspaceData(userId: string, topic: string) {
         ]),
       ),
       category_limits: Object.fromEntries(
-        Object.entries(JSON.parse(String(f.category_limits || "{}"))).map(
+        Object.entries(parseJson<Record<string, string>>(f.category_limits, {})).map(
           ([key, v]) => [key, inCurrency(String(v), "CAD", "CNY", rates)],
         ),
       ),

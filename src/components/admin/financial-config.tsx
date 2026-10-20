@@ -1,4 +1,5 @@
 "use client";
+import { parseJson } from "@/lib/json";
 import { useState } from "react";
 import { Card, FormDialog, DataCards, Modal } from "@/components/ui/primitives";
 import { useApp } from "@/components/ui/providers";
@@ -21,7 +22,7 @@ export function FinancialConfig({ data }: { data: Workspace }) {
     value: c.code,
     label: c.code,
   }));
-  const guidance = JSON.parse(String(d.guidance?.[0]?.value || "{}")) as Record<
+  const guidance = parseJson<Record<string, string[]>>(d.guidance?.[0]?.value, {}) as Record<
     string,
     string[]
   >;

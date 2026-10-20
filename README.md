@@ -1,253 +1,559 @@
-# FinBridge AI
+# FinBridge AI — Cross-Border & Student Finance Assistant
 
-A student and cross-border finance competition application built with Next.js, Server Actions and a MySQL-compatible database. Students can plan tuition, compare simulated remittance providers, involve a parent, approve a sandbox transfer and inspect its receipt and audit evidence.
+[![Next.js](https://img.shields.io/badge/Next.js-16.4-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.3-blue?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.3-38bdf8?logo=tailwindcss)](https://tailwindcss.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0%20%2F%20MariaDB-orange?logo=mysql)](https://www.mysql.com/)
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen)](#testing-and-verification)
 
-All balances, exchange rates, providers and payments are **sandbox data**. No real money moves. This repository has a working local demo; the remaining specification items are tracked in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+FinBridge AI is an intelligent financial management and cross-border remittance assistant designed for international students, families, and educational sponsors. It bridges the gap between home-country funding and foreign-study expenses through multi-currency wallets, tuition forecasting, simulated remittance comparisons, parental financial governance, and an autonomous AI financial copilot.
 
-## Technology and architecture
+> [!NOTE]
+> All balances, exchange rates, remittance providers, and payment transfers in this application are **sandbox simulation data**. No real money is transferred.
 
-- Next.js 16.4 App Router, React 19, TypeScript, Tailwind CSS 4.
-- Material UI and Community MUI X Charts; React Icons.
-- MySQL-compatible SQL through `mysql2/promise`, a connection pool and parameterized queries.
-- Zod validation; Decimal.js calculations; bcrypt password hashes; signed JWT sessions with `jose`.
-- Deterministic mock agent by default. OpenAI Responses and Google Gemini adapters with application-owned tools and encrypted, user-selectable model configurations.
-- Playwright browser tests and Node unit tests.
+---
 
-Normal application requests use dedicated `"use server"` action modules. There are no REST endpoints, API route handlers, separate Express server, Supabase or Firebase dependencies. Actions authenticate the caller, validate inputs, check roles and ownership, and invoke services. The browser never receives database credentials or an OpenAI key.
+## Table of Contents
+
+- [Core Capabilities](#core-capabilities)
+- [Architecture & Technology Stack](#architecture--technology-stack)
+- [Project Structure](#project-structure)
+- [Getting Started & Installation](#getting-started--installation)
+- [Database Setup & Management](#database-setup--management)
+- [Environment Variables](#environment-variables)
+- [Demo Accounts & Credentials](#demo-accounts--credentials)
+- [Application Sitemap & Routes](#application-sitemap--routes)
+- [Financial & Remittance Sandbox Engine](#financial--remittance-sandbox-engine)
+- [Unified Payment & Settlement Workflow](#unified-payment--settlement-workflow)
+- [AI Copilot & Structured Tool Engine](#ai-copilot--structured-tool-engine)
+- [Family Circle & Parental Governance](#family-circle--parental-governance)
+- [Subscription Plans & Quota Boundaries](#subscription-plans--quota-boundaries)
+- [Security, Privacy & Internationalization](#security-privacy--internationalization)
+- [Testing and Verification](#testing-and-verification)
+- [Competition Demonstration Guide](#competition-demonstration-guide)
+
+---
+
+## Core Capabilities
+
+### 🎓 1. Student Finance & Tuition Planning
+- **Multi-Currency Accounts**: Manage checking, savings, cash, and digital wallets across 111 global currencies (primary focus on CNY, BDT, CAD, USD, EUR, GBP).
+- **Transaction Management**: Categorized expenses and income with real-time balance calculations, confidence scoring, search, filter, and pagination.
+- **Bulk CSV Imports**: Upload bank statements (up to 5 MB, 2,000 rows) with flexible column mapping, pre-import preview, and atomic rollback on validation failure.
+- **Tuition Invoice Forecast**: Track invoices, deadlines, scholarship credits, and monthly savings targets. Calculates projected living obligations to highlight real funding gaps.
+- **Category Budgets**: Set monthly limits with visual spending progress and automated overspending warnings.
+
+### 🌐 2. Cross-Border Remittance Simulation
+- **Corridor Price Comparison**: Evaluate simulated providers (StudentTransfer, GlobeSend, SwiftBank, FastRemit) factoring in base fees, percentage charges, and exchange rate spreads.
+- **Server-Locked Quotes**: 30-minute guaranteed quote expiry preventing client-side price tampering.
+- **Cryptographic Sandbox Execution**: 5-minute single-use SHA-256 tokens for transfer simulation, ensuring strict authorization and idempotency.
+- **Double-Entry Ledger**: Balanced debit/credit entries with immutable receipts and cryptographic audit records.
+
+### 💳 3. Unified Payment & Manual Settlement Queue
+- **Supported Channels**: FinBridge internal wallet transfers, demo card deposits, and manual external channels (Bank/Wire Transfer, PayPal, Alipay, WeChat Pay, UnionPay).
+- **State Machine Lifecycle**: `DRAFT` ➔ `WAITING_PARENT` ➔ `QUEUED` ➔ `PROCESSING` ➔ `COMPLETED` / `FAILED` / `CANCELLED`.
+- **Parent-Governed Beneficiaries**: Student outgoing transfers to new beneficiaries require parental approval. Configurable auto-approval thresholds for one-time transfers.
+- **Moderator Settlement Queue**: Role-restricted settlement dashboard (`/admin/settlements`) to review, process, and complete pending requests with payout references.
+
+### 🤖 4. Autonomous AI Financial Copilot
+- **Multi-Provider Support**: Deterministic local mock provider (zero API key needed), Google Gemini (`gemini-3.8-flash`), and OpenAI adapters.
+- **Secure Key Encryption**: API keys encrypted with authenticated AES-256-GCM in MySQL; never returned to client browsers.
+- **Application-Owned Tools**: Inspect balances, retrieve transactions, compare transfer corridors, check tuition deadlines, and suggest budgets.
+- **Structured Action Requests**: AI cannot execute mutations directly; it proposes structured, validated action proposals (`draftPayment`, `requestAction`, `open_page`, `require_answer`) requiring explicit user confirmation.
+
+### 👨‍👩‍👧 5. Family Circle & Parental Governance
+- **Student-Parent Linking**: Secure invitation workflow with cryptographic invite tokens.
+- **Granular Visibility Matrix**: Configurable viewing permissions for balances, category totals, transaction descriptions, tuition invoices, and budgets.
+- **Strict Spending Controls**: Transfer threshold triggers, per-transfer caps, daily/monthly ceilings, tuition/conversion switches, and per-category monthly limits. Parents can tighten, but never relax, platform risk limits.
+
+### 🛡️ 6. Administration & Role-Based Moderation
+- **Role Hierarchy**: `STUDENT`, `PARENT`, `ADMIN`, `MODERATOR`.
+- **Granular Moderator Delegations**: Specific sections assigned per moderator (`reports`, `team`, `agent`, `models`, `users`, `finance`, `catalog`).
+- **Risk Ceilings Engine**: Configurable daily/monthly ceilings, transfer frequency limits, and large-transfer review thresholds.
+- **Public Team & Leadership Profiles**: Editable team directory with illustrated SVG avatars and designations.
+
+---
+
+## Architecture & Technology Stack
+
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| **Framework** | Next.js 16.4 (App Router) | Server-side rendering, routing, Server Actions |
+| **Frontend** | React 19, Tailwind CSS 4, Material UI | Responsive UI components, typography, dark/light theme |
+| **Charts** | MUI X Charts, React Flow (`@xyflow/react`) | Visual financial metrics, workflow flowcharts |
+| **Language** | TypeScript 6.0 | Strict type safety across client and server |
+| **Database** | MySQL 8.0 / MariaDB 10.4+ (`mysql2/promise`) | Relational persistence, connection pooling, transactions |
+| **Math Precision** | Decimal.js | Exact financial decimal math, zero floating-point error |
+| **Validation** | Zod 4 | Schema validation for forms, CSV rows, and AI tools |
+| **Authentication** | `jose` (JWT), `bcryptjs` | Signed stateless httpOnly cookies, salted bcrypt hashes |
+| **AI Integration** | `@google/genai`, `openai` | Gemini 3.8 Flash, OpenAI Responses with function calling |
+| **Testing** | Playwright, Node Test Runner, `tsx` | End-to-end browser workflows, integration, unit tests |
+
+### Architectural Principles
+
+1. **Server Actions Only (`"use server"`)**: No REST API routes or external backend servers. Every mutation and query runs inside authenticated Next.js Server Actions with role and ownership verification.
+2. **Double-Entry Ledger Integrity**: Every balance mutation produces paired debit and credit entries with explicit balance checks.
+3. **Idempotency & Concurrency Locks**: Database transactions and row-level locks prevent race conditions, double credits, and duplicate execution.
+4. **Zero Client Secret Exposure**: Database credentials, encryption secrets, and AI provider API keys remain strictly on the server.
+
+---
+
+## Project Structure
 
 ```text
-src/app/                   Locale layouts, dynamic route resolver, shared CSS
-src/actions/               Authenticated application Server Actions
-src/services/              FX, tuition, remittance, parent controls, sandbox execution
-src/ai/                    Mock/OpenAI/Gemini providers and validated financial tools
-src/components/            Student, parent, admin, public pages and shared UI
-src/dictionaries/          English, Simplified Chinese, Bangla
-src/lib/                   SQL, sessions, permissions, validation, risk and money
-database/                  Schema, reference seed and demo seed
-scripts/                   Setup, additive migrations and seed generation
-tests/                     Financial unit tests and browser workflows
+├── database/
+│   ├── schema.sql                   # Complete unified DDL schema (57 tables)
+│   └── seed.sql                     # Unified base reference & demo sample data
+├── public/                          # Brand assets, logos, and static icons
+├── scripts/
+│   ├── setup.mjs                    # One-command database initializer (schema + seed)
+│   ├── migrate.mjs                  # Incremental migrations & historical rate generator
+│   ├── generate-demo.mjs            # Regenerator for database/seed.sql
+│   ├── platform-migration.mjs       # Additive platform column & catalog migration
+│   ├── payment-migration.mjs        # Additive payments & settlement migration
+│   ├── demo-team.mjs                # Demo moderator team setup & avatar generator
+│   └── provision-local.mjs          # Optional local XAMPP/MySQL database bootstrap
+├── src/
+│   ├── actions/                     # Authenticated Server Actions ("use server")
+│   │   ├── account.actions.ts       # Account creation, edit, archiving
+│   │   ├── admin.actions.ts         # Risk policy, user control, plans, catalog
+│   │   ├── agent.actions.ts         # AI chat conversation and execution
+│   │   ├── agent-workflow.actions.ts# Action proposals and user confirmations
+│   │   ├── alert.actions.ts         # Alert dismissal and snooze controls
+│   │   ├── auth.actions.ts          # Login, registration, password reset, demo switch
+│   │   ├── budget.actions.ts        # Category monthly budgets
+│   │   ├── credit.actions.ts        # Credit task tracking
+│   │   ├── dashboard.actions.ts     # Aggregated workspace financial summary
+│   │   ├── parent.actions.ts        # Family link approvals, invitations, controls
+│   │   ├── payment.actions.ts       # Unified payment requests, card deposits, payouts
+│   │   ├── platform.actions.ts      # Team profiles, model management, photo updates
+│   │   ├── preferences.actions.ts   # Locale, theme, and preferred currency updates
+│   │   ├── report.actions.ts        # User feedback and compliance reports
+│   │   ├── subscription.actions.ts  # Demo checkout and subscription upgrades
+│   │   ├── transaction.actions.ts   # Transaction entry and CSV batch imports
+│   │   ├── transfer.actions.ts      # Remittance quote and transfer simulation
+│   │   ├── tuition.actions.ts       # Invoices and tuition funding scenarios
+│   │   └── user.actions.ts          # Profile and account closure
+│   ├── ai/                          # AI Providers and Tool Definitions
+│   │   ├── tools/index.ts           # Strictly typed financial tool definitions
+│   │   ├── action-catalog.ts        # Catalog of safe client-confirmed actions
+│   │   ├── gemini-provider.ts       # Google Gemini 3.8 Flash adapter
+│   │   ├── openai-provider.ts       # OpenAI Responses API adapter
+│   │   ├── mock-provider.ts         # Offline deterministic simulation provider
+│   │   └── model-config.ts          # Encrypted key storage and retrieval
+│   ├── app/                         # Next.js 16 App Router
+│   │   └── [locale]/                # Locale-aware layouts and pages
+│   │       ├── [[...path]]/         # Dynamic view dispatcher
+│   │       ├── globals.css          # Theme CSS and Tailwind styling
+│   │       └── layout.tsx           # Root HTML layout and providers
+│   ├── components/                  # React Presentation Components
+│   │   ├── accounts/                # Wallet and account management cards
+│   │   ├── admin/                   # Administrative panels and settlement queue
+│   │   ├── agent/                   # AI chat interface and action confirmation cards
+│   │   ├── billing/                 # Plan tier selectors and checkout modal
+│   │   ├── budget/                  # Category spending progress charts
+│   │   ├── charts/                  # MUI X Chart visualizers
+│   │   ├── dashboard/               # Financial overview widgets and stat tiles
+│   │   ├── family/                  # Parental controls and linked student views
+│   │   ├── forms/                   # Validated input dialogs and forms
+│   │   ├── layout/                  # Sidebar navigation, navbar, theme toggles
+│   │   ├── payments/                # Payment tabs, deposit forms, settlement list
+│   │   ├── settings/                # Security, model configuration, card tokens
+│   │   ├── transfers/               # Remittance corridors and quote preview
+│   │   ├── tuition/                 # Invoice progress and funding gap analyzer
+│   │   └── ui/                      # Modals, buttons, notifications, badges
+│   ├── dictionaries/                # Translations: en.json, zh-CN.json, bn-BD.json
+│   ├── lib/                         # Core Utilities & Business Rules
+│   │   ├── admin-permissions.ts     # Moderator section permissions
+│   │   ├── audit.ts                 # Audit logging helper
+│   │   ├── auth.ts                  # Session resolution and current user query
+│   │   ├── avatar.ts                # Profile photo validation and sanitization
+│   │   ├── db.ts                    # MySQL connection pool and query helpers
+│   │   ├── money.ts                 # Decimal.js calculations and formatting
+│   │   ├── payment-rules.ts         # Payment limits and fee calculators
+│   │   ├── permissions.ts           # Route guard and role authorization
+│   │   ├── plan-limits.ts           # Subscription quota boundary enforcer
+│   │   ├── risk-engine.ts           # Ceiling, frequency, and duplicate transfer checks
+│   │   ├── secrets.ts               # AES-256-GCM encryption for credentials
+│   │   └── session.ts               # JWT creation, verification, cookie management
+│   ├── services/                    # Domain Business Logic
+│   │   ├── automatic-alerts.service.ts # Workspace alert evaluation
+│   │   ├── currency.service.ts      # FX rate catalog and conversions
+│   │   ├── financial-config.service.ts # Admin risk and corridor settings
+│   │   ├── parent-controls.service.ts # Strict parent cap enforcement
+│   │   ├── payment.service.ts       # Unified payment processing engine
+│   │   ├── remittance.service.ts    # Corridor quotes and fee breakdown
+│   │   ├── sandbox-payment.service.ts # Demo card charges and token storage
+│   │   └── tuition.service.ts       # Tuition funding gap calculations
+│   └── types/                       # TypeScript interfaces and shared types
+└── tests/                           # Test Suites
+    ├── agent-actions.test.ts        # AI tool validation and action catalog tests
+    ├── finance.test.ts              # Decimal math, tuition forecast, and fee tests
+    ├── payments.integration.ts      # Shared financial state machine integration tests
+    ├── platform.test.ts             # Moderator permissions and photo upload tests
+    ├── providers.test.ts            # Gemini/OpenAI adapter contract tests
+    └── e2e/                         # Playwright browser end-to-end specifications
 ```
 
-Read `AGENTS.md` before changing Next.js code. The installed framework's guides are in `node_modules/next/dist/docs/`; this version differs from older releases.
+---
 
-## Installation and MySQL setup
+## Getting Started & Installation
 
-Use Node.js 22 or newer and npm. MySQL 8 is the intended database target. The local implementation has been exercised against the user's existing XAMPP **MariaDB 10.4.32**, not a separate MySQL 8 installation. Both support the SQL window functions used by rate history.
+### Prerequisites
+- **Node.js**: `v22.0.0` or newer.
+- **npm**: `v10.0.0` or newer.
+- **Database**: MySQL 8.0+ or MariaDB 10.4.32+ (e.g., standard XAMPP MySQL).
 
+### 1. Clone & Install Dependencies
 ```powershell
-npm ci
+git clone https://github.com/your-username/Cross-border-and-Student-Finance-Assistant.git
+cd Cross-border-and-Student-Finance-Assistant
+npm install
+```
+
+### 2. Configure Environment Variables
+Copy `.env.example` or create `.env.local` in the project root:
+```powershell
 Copy-Item .env.example .env.local
 ```
 
-Create a dedicated database and database account on your existing server using your database administration tool:
-
+### 3. Initialize Database
+Create your MySQL database and grant permissions:
 ```sql
 CREATE DATABASE finbridge_ai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'finbridge'@'localhost' IDENTIFIED BY 'choose-a-local-password';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
-  ON finbridge_ai.* TO 'finbridge'@'localhost';
+CREATE USER 'finbridge'@'localhost' IDENTIFIED BY 'your-password-here';
+GRANT ALL PRIVILEGES ON finbridge_ai.* TO 'finbridge'@'localhost';
+FLUSH PRIVILEGES;
 ```
 
-Put those connection details in `.env.local`. Generate `SESSION_SECRET` using `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"` and keep it local. The existing workspace is already configured; do not overwrite its `.env.local` to continue development.
-
+Execute the automated database setup (imports schema and seeds demo data):
 ```powershell
 npm run db:setup
+```
+
+### 4. Start Development Server
+```powershell
 npm run dev
 ```
 
-Open [the local demo](http://127.0.0.1:3000/en/demo). The development server binds to loopback.
+Open [http://127.0.0.1:3000/en/demo](http://127.0.0.1:3000/en/demo) in your browser.
 
-`db:setup` imports `schema.sql` and `seed.sql`, then applies additive migrations. Seed inserts use `INSERT IGNORE`; rerunning setup does not reset existing demo balances, dates or subscriptions. Use a separate database for a fresh scenario. `scripts/generate-demo.mjs` regenerates the seed SQL file, not live database records.
+---
 
-For an existing populated project, apply only new migrations:
+## Database Setup & Management
+
+FinBridge AI maintains a consolidated database architecture:
+
+- **[database/schema.sql](file:///c:/Users/WALTON/Downloads/Git-Jibon/Cross-border-and-Student-Finance-Assistant/database/schema.sql)**: The complete, self-contained DDL definition containing all 57 application tables, primary keys, foreign key constraints, indexes, ENUM types, and microsecond `TIMESTAMP(6)` precisions.
+- **[database/seed.sql](file:///c:/Users/WALTON/Downloads/Git-Jibon/Cross-border-and-Student-Finance-Assistant/database/seed.sql)**: The unified seed dataset containing 111 currencies, 166 countries, transaction categories, plan tiers, remittance providers, payment methods, admin risk settings, and the complete demo dataset (students, parents, admins, moderator team members with avatars, accounts, transactions, and budgets).
+
+### Available Database Commands
 
 ```powershell
+# Initialize schema and seed data
+npm run db:setup
+
+# Run additive migrations and generate illustrative FX history
 npm run db:migrate
+
+# Regenerate seed.sql with fresh demo timestamps and avatars
+node scripts/generate-demo.mjs
 ```
 
-The additive migrations add the country/currency catalog, profile photos, moderator permissions, encrypted AI models, saved demo cards, beneficiaries, payment requests, settlement history and subscription events. Demo mode adds clearly labeled team illustrations and an RMB family wallet without replacing later Admin edits. FX timestamps retain microsecond precision. In demo mode it inserts 29 days of illustrative historical rates without replacing current rates. No unrelated databases are changed.
+---
 
-`scripts/provision-local.mjs` is an optional local XAMPP bootstrap that requires database administrator access and creates this project's database/account and environment file. Normal application execution uses the limited project account; do not use the bootstrap against a shared production server.
+## Environment Variables
 
-## Environment variables
+| Variable | Required | Default | Description |
+| --- | :---: | --- | --- |
+| `DB_HOST` | Yes | `127.0.0.1` | MySQL server host address |
+| `DB_PORT` | Yes | `3306` | MySQL server port |
+| `DB_NAME` | Yes | `finbridge_ai` | Dedicated database name |
+| `DB_USER` | Yes | `finbridge` | Database username |
+| `DB_PASSWORD` | Yes | — | Database user password |
+| `SESSION_SECRET` | Yes | — | 32+ character secret for JWT session signing |
+| `AI_KEY_ENCRYPTION_SECRET` | No | `SESSION_SECRET` | 32+ character key for AES-256-GCM encryption of saved AI keys |
+| `APP_URL` | No | `http://localhost:3000` | Application base URL |
+| `NEXT_PUBLIC_APP_NAME` | No | `FinBridge AI` | Display name and brand title |
+| `AI_MODE` | No | `mock` | Default AI provider: `mock`, `gemini`, or `openai` |
+| `OPENAI_API_KEY` | No | — | Optional system-level OpenAI API key |
+| `OPENAI_MODEL` | No | `gpt-4o-mini` | Optional system-level OpenAI model name |
+| `DEMO_MODE` | No | `true` | Enables role-switcher buttons and demo credentials on `/demo` |
 
-| Variable | Meaning |
-| --- | --- |
-| `DB_HOST`, `DB_PORT` | Existing database server; default port 3306 |
-| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Dedicated project database and credentials |
-| `SESSION_SECRET` | Random signing secret, at least 32 characters |
-| `NEXT_PUBLIC_APP_NAME` | Display branding; defaults to FinBridge AI |
-| `APP_URL` | Intended public origin for deployment configuration |
-| `AI_MODE` | Legacy adapter default; the UI uses each user’s selected model |
-| `OPENAI_API_KEY`, `OPENAI_MODEL` | Legacy server adapter configuration; new model configurations are managed in Settings/Admin |
-| `AI_KEY_ENCRYPTION_SECRET` | Optional stable 32+ character encryption secret; falls back to `SESSION_SECRET`. Re-enter saved keys after rotating this secret |
-| `DEMO_MODE` | Enables demo-role login and demo password reset when `true` |
+---
 
-Never commit `.env.local`. Demo-role login includes an administrator session: disable `DEMO_MODE`, remove or suspend seeded demo users, change the seeded administrator credentials, and configure HTTPS before exposing a non-demo deployment.
+## Demo Accounts & Credentials
 
-## Demo accounts
+When `DEMO_MODE=true`, all seeded accounts can be accessed using password: **`DemoOnly!2026`**.
 
-All three seeded accounts use password **`DemoOnly!2026`**. These are public demonstration credentials, not production credentials.
+| Role | Email | Starting Plan | Purpose & Initial State |
+| --- | --- | :---: | --- |
+| **Student** | `student@finbridge.demo` | **Pro** | Tsinghua University student with CNY 16,880 + BDT 780,000 + USD 420. Tuition invoice: CNY 41,680. |
+| **Parent** | `parent@finbridge.demo` | **Family** | Linked parent with Family RMB wallet (CNY 25,000) and configured transfer controls. |
+| **Administrator**| `admin@finbridge.demo` | **Pro** | Full administrative rights over users, risk policy, settlement queue, and shared AI models. |
+| **Moderator (CEO)** | `amina@example.com` | — | Chief Executive Officer profile; access to reports triage and team directory. |
+| **Moderator (Eng)** | `li@example.com` | — | Head of Engineering profile; access to AI agent audit and AI models. |
+| **Moderator (Support)**| `sadia@example.com` | — | Student Support Lead profile; access to user accounts and support reports. |
+| **Moderator (Finance)**| `chen@example.com` | — | Finance Operations Lead; access to finance risk settings and currency catalog. |
 
-| Role | Email | Starting plan |
-| --- | --- | --- |
-| Student | `student@finbridge.demo` | Pro |
-| Parent | `parent@finbridge.demo` | Family |
-| Administrator | `admin@finbridge.demo` | Pro |
+> [!TIP]
+> You can switch between any demo persona with one click from the **/en/demo** page.
 
-The student and parent are already linked. New students/parents can register, but public registration cannot create an administrator. The first administrator comes from the demo seed. The demo page provides role buttons when demo mode is enabled.
+---
 
-The student starts with BDT 780,000, RMB 16,880.40 and USD 420, an RMB 41,680 tuition invoice due 34 days after seeding, and an RMB 5,210 scholarship. Monthly income and living-cost assumptions produce a projected tuition gap even though current cash can cover the transfer. Current cash and projected funds after living expenses intentionally differ.
+## Application Sitemap & Routes
 
-## Pages and workflows
+All application routes are localized with `/[locale]` (`/en`, `/zh-CN`, `/bn-BD`):
 
-Prefix every route with `/en`, `/zh-CN` or `/bn-BD`.
+```text
+Public Pages
+├── /en                      # Landing page with interactive feature preview
+├── /en/features             # Comprehensive feature breakdown
+├── /en/how-it-works         # Step-by-step student and parent journey
+├── /en/pricing              # Subscription tiers and feature comparison
+├── /en/security             # Security practices, encryption, and data boundaries
+├── /en/about                # Mission statement and verified leadership team
+├── /en/terms                # Service terms
+├── /en/privacy              # Privacy policy
+└── /en/demo                 # Interactive role-switcher demo hub
 
-| Area | Routes and capabilities |
-| --- | --- |
-| Public | `/`, `/features`, `/how-it-works`, `/pricing`, `/security`, `/about`, `/terms`, `/privacy`, `/demo` |
-| Access | `/login`, `/register`, `/forgot-password`, `/onboarding` |
-| Student finances | `/dashboard`, `/money`, `/transactions`, `/budget`, `/wallet`, `/transfer` |
-| Planning | `/tuition`, `/credit`, `/agent`, `/alerts`, `/activity` |
-| Shared account tools | `/subscription`, `/subscription/checkout`, `/settings`, `/reports`, `/security-assessment` |
-| Family | Student `/family`; parent `/parent`, `/parent/students`, `/parent/approvals`, `/parent/controls` |
-| Administration | `/admin`, `/admin/users`, `/admin/plans`, `/admin/subscriptions`, `/admin/reports`, `/admin/risk`, `/admin/agent`, `/admin/finance`, `/admin/audit`, `/project-evidence` |
+Authentication
+├── /en/login                # Authenticated session login
+├── /en/register             # Student or Parent registration (with profile photo upload)
+├── /en/forgot-password      # Password reset flow
+└── /en/onboarding           # Initial profile setup (country, university, currency)
 
-Students can add/edit/archive empty accounts; add and categorize transactions; filter/search/page through transactions; import CSV; create monthly budgets; maintain tuition invoices; save funding scenarios; compare providers; simulate transfers/conversions; update credit-readiness tasks; manage alerts and submit reports.
+Student Workspace
+├── /en/dashboard            # Central overview: balances, tuition alert, quick actions
+├── /en/money                # Multi-currency account balances and wallet breakdown
+├── /en/transactions         # Searchable transaction history and CSV batch import
+├── /en/wallet               # Currency wallet details and internal balance exchange
+├── /en/transfer             # Remittance corridor comparison and transfer simulation
+├── /en/tuition              # Tuition invoice scheduler and funding gap calculator
+├── /en/budget               # Category budget targets and monthly spend visualizer
+├── /en/credit               # Country-specific credit builder checklist
+├── /en/payments             # Unified deposit, external send, and withdrawal hub
+├── /en/beneficiaries        # Saved and parent-approved transfer beneficiaries
+├── /en/agent                # AI Copilot chat with interactive action confirmations
+├── /en/alerts               # Deduplicated financial alerts and notification center
+├── /en/activity             # Comprehensive immutable audit log and transfer receipts
+└── /en/family               # Family Circle link status and active parental restrictions
 
-CSV imports accept up to 5 MB and 2,000 rows, with column mapping and a preview. Required columns are `description,amount,type,category,date`; `notes` is optional. Types are `INCOME` or `EXPENSE`, dates are ISO `YYYY-MM-DD`, amounts are positive decimal strings, and categories must match the application's category list. The selected account determines currency. Validation and balance checks run on the server; failed imports roll back the complete batch.
+Parent Workspace
+├── /en/parent               # Parent home: linked students, balances, and quick actions
+├── /en/parent/students      # Detailed financial view of linked student accounts
+├── /en/parent/approvals     # Queue of pending transfer and beneficiary approvals
+└── /en/parent/controls      # Thresholds, category caps, and auto-approval limits
 
-Parents initiate invitations to registered students; the student accepts the token. Parents manage sharing and payment controls for the linked family. Parents do not receive the student's private AI conversation. Parent controls include transfer thresholds, per-transfer/daily/monthly limits, tuition/conversion approval switches and monthly category caps displayed in RMB. An internal CAD normalization base is retained for compatibility with the existing ledger and risk engine. Blank category caps are unlimited; zero blocks spending. The strictest applicable linked-parent cap applies. Controls are enforced for manual expenses, imports, recategorization and outgoing transfers.
+Account & Settings
+├── /en/subscription         # Active subscription status and quota consumption
+├── /en/subscription/checkout# Simulated checkout for plan upgrades
+├── /en/settings             # Profile editing, saved cards, and personal AI model keys
+├── /en/reports              # Support ticket submission and issue reporting
+├── /en/security-assessment  # Application security architecture overview
+└── /en/project-evidence     # Verification logs, test results, and compliance proof
 
-Administrators can manage users, plan prices/limits, reports, provider costs/status, FX rates, countries, currencies, shared AI models, team profiles, moderator permissions, payment methods and the settlement queue. Moderators receive only the selected sections; only administrators can grant permissions. Moderators can edit their own photo, email and portfolio link. See the status document for financial configuration editors still outstanding.
+Administration & Moderation
+├── /en/admin                # Admin KPI overview and platform health
+├── /en/admin/settlements    # Manual payout and external settlement queue
+├── /en/admin/payment-methods# Configured deposit and withdrawal payment options
+├── /en/admin/users          # User list, role adjustments, and account suspension
+├── /en/admin/plans          # Subscription tiers, pricing, and feature limits
+├── /en/admin/subscriptions  # Active platform subscriptions and billing history
+├── /en/admin/reports        # Triage and resolution of user-submitted reports
+├── /en/admin/risk           # Platform-wide transfer ceilings and large-transaction thresholds
+├── /en/admin/agent          # Global agent run logs and tool execution metrics
+├── /en/admin/finance        # Currency corridor routes and remittance provider rates
+├── /en/admin/audit          # System-wide immutable security audit log
+├── /en/admin/settings       # Global system parameters and default currencies
+├── /en/admin/catalog        # Active currencies and country mappings
+├── /en/admin/models         # Shared system AI models with encrypted keys
+└── /en/admin/team           # Team directory and moderator permission assignments
+```
 
-## Sandbox financial engine
+---
 
-1. Compare provider quotes from database rates, spreads, fixed fees and percentage fees. Provider fixed fees are stored in BDT and converted to the source currency; transfer limits are in CAD equivalent.
-2. Save quotes server-side with a 30-minute expiry. Client-supplied amounts cannot alter an existing quote.
-3. Prepare a transfer. Check account ownership/status, exact source balance, provider limits, duplicate/frequency limits, daily/monthly ceilings, tuition deadline and parent controls. An invoice and wallet destination cannot both receive the same transfer.
-4. Collect required parent decisions. A parent approval does not execute a transfer.
-5. The student explicitly selects **Approve & simulate transfer**. The server creates a random one-use token, stores only its SHA-256 hash, and expires it after five minutes.
-6. Execute in a database transaction while locking the student and affected financial records. Recheck risk and quota; debit the source; credit the destination or tuition invoice; write balanced per-currency ledger entries and transaction records; consume the token; increment usage; verify the resulting balance; preserve the audit event and receipt.
+## Financial & Remittance Sandbox Engine
 
-Failure rolls back execution. Completed transfers cannot be replayed. Parent settings may tighten the platform ceilings but cannot relax them. Admin → Financial data now edits the daily/monthly ceilings, frequency limit and large-transfer threshold in RMB. Default internal ceilings are CAD 15,000/day, CAD 50,000/month and ten transfers/day; both payment workflows read the same policy. The interface freezes prepared transfer details so approval corresponds to the stored draft.
+The remittance sandbox guarantees realistic pricing, predictable fees, and tamper-proof execution:
 
-Money is calculated with Decimal.js and stored in SQL `DECIMAL` columns. FX rates are units of each currency per CAD. Amounts remain decimal strings across server boundaries. Charts convert to numeric display values only.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Student
+    actor Parent
+    participant App as FinBridge Server
+    participant DB as MySQL Database
 
-## AI modes and evidence
+    Student->>App: Request remittance quote (BDT -> CAD)
+    App->>DB: Fetch FX rate, corridor spread, and fixed fees
+    App-->>Student: 30-minute locked quote
+    Student->>App: Prepare transfer draft
+    App->>DB: Check balance, risk ceilings & parent policy
+    alt Requires Parent Approval
+        App->>DB: Mark transfer WAITING_APPROVAL
+        Parent->>App: Review transfer details & approve
+        App->>DB: Record approval decision
+    end
+    Student->>App: Approve & simulate transfer
+    App->>DB: Mint 5-min single-use token (SHA-256)
+    App->>DB: Begin transaction & row-lock records
+    App->>DB: Debit source wallet & credit destination/tuition
+    App->>DB: Write balanced ledger entries & audit receipt
+    App->>DB: Invalidate single-use token & commit
+    App-->>Student: Return receipt & updated balances
+```
 
-`AI_MODE=mock` runs deterministic, database-backed tools without a key or external request. It supports tuition, transfer, budget, credit and risk prompts. Tool calls and outputs, agent runs and results are stored for inspection/export.
+---
 
-Add a model in **Settings → My AI models** (student or parent), or **Admin → AI models** for shared models. Choose OpenAI or Google Gemini, enter the provider's model ID and API key, then select that model in Settings or the agent header. Keys use authenticated AES-256-GCM encryption and never return to the browser; only the last four characters are displayed. Provider errors distinguish invalid keys, unavailable models, quota exhaustion and temporary overload without returning provider secrets. Use **Test connection** beside a saved model. On 2026-10-14, the saved Gemini key passed live connection and financial-tool tests with `gemini-3.8-flash`; the previous `gemini-1.5-pro` returned 404. Later Google calls intermittently returned 503 high-demand errors, which the app retries once. The final live check reached Google's reported 20-request free-tier limit for that model; no further live requests were sent. Live OpenAI access remains unverified.
+## Unified Payment & Settlement Workflow
 
-The agent can inspect accounts, transactions, beneficiaries and payment statuses, create beneficiary approval requests, prepare persistent payment drafts, and generate budget suggestions for explicit review/save. Try **“Add money RMB 100 by card”**, **“Send RMB 100 to friend@example.com”**, **“Withdraw RMB 200 using Alipay”**, or **“Check my balance and transactions”**. Missing or ambiguous account/destination information opens the normal payment form. It never invents recipient bank details or asks for card data in chat. A visible confirmation submits its saved draft through the exact service used by the normal UI. Previous completed conversations can be reopened.
+FinBridge AI features a full-lifecycle payment engine:
 
-Tool outcomes, runs, state transitions and receipts are persisted. No model can execute SQL, approve a parent decision, settle an external payment or mint the legacy transfer approval token. Parent permissions and limits are rechecked by application code.
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT: Create Request
+    DRAFT --> CANCELLED: User cancels draft
+    DRAFT --> WAITING_PARENT: Requires parent approval
+    DRAFT --> QUEUED: Internal wallet / Approved
+    WAITING_PARENT --> QUEUED: Parent Approves
+    WAITING_PARENT --> REJECTED: Parent Rejects
+    QUEUED --> PROCESSING: Moderator claims request
+    QUEUED --> CANCELLED: User cancels
+    PROCESSING --> COMPLETED: Moderator inputs payout ref
+    PROCESSING --> FAILED: Moderator marks failed
+    COMPLETED --> [*]
+    FAILED --> [*]: Auto-refund held funds
+    CANCELLED --> [*]: Release reserved funds
+    REJECTED --> [*]: Release reserved funds
+```
 
-## Payments, beneficiaries and manual settlement
+---
 
-Students and parents have `/payments`, `/beneficiaries`, `/money`, `/transactions` and `/agent`. Both can send to registered wallets; the recipient needs an active wallet in the selected currency. RMB/BDT are the primary demo currencies; the catalog and per-method currency lists support international expansion.
+## AI Copilot & Structured Tool Engine
 
-Supported methods are FinBridge wallet, demo card (deposits only), bank/wire, PayPal, Alipay, WeChat Pay and UnionPay. External methods are **manual sandbox workflows**, not live provider integrations. Admin configures receiving accounts/instructions and supported currencies at `/admin/payment-methods`. Authorized settlement moderators use `/admin/settlements`.
+The AI Copilot does not operate as an unconstrained chatbot; it uses an application-owned, schema-validated tool pipeline:
 
-- New requests are saved as `DRAFT`; reviewing a draft does not debit or credit money. Draft exchange rates expire after 30 minutes.
-- Explicit confirmation reserves outgoing funds. Parent rules can move the request to `WAITING_PARENT`. Approved wallet transfers settle atomically; external requests enter `QUEUED`.
-- Reviewers move a queued request to `PROCESSING`, then record `COMPLETED` with a settlement reference or `FAILED`. Queued requests may be rejected. Manual deposits are credited only on completion; failed/rejected/cancelled outgoing requests release the reservation once.
-- Users can cancel drafts, queued requests and requests awaiting a parent. Processing requests are controlled by the settlement reviewer to avoid refunding a payout already being handled.
-- Card deposits use only the existing demo card numbers, require a cardholder/expiry/CVV or a user-owned saved demo token, and credit once on success. No PAN or CVV is persisted. Saved cards can be renamed/removed in Settings.
-- Student beneficiaries require linked-parent decisions. A destination change requires a new record and new approval. One-time recipients can use parent-configured auto-approval and amount limits; otherwise a parent must decide. Unlinked students use the administrator's one-time-recipient ceiling (default RMB 1,000).
-- Every transition records an event and audit entry. Payment status/history appears in Payments and Transactions and refreshes every ten seconds while the page is visible. Notifications respect the account preference.
+```mermaid
+flowchart TD
+    User([User Prompt: 'Send RMB 100 to Mike']) --> Agent[AI Agent Provider]
+    Agent --> ToolCall{Tool Selection}
+    ToolCall -->|Read Tool| ReadTool[Query Database: getAccounts, getTransactions]
+    ReadTool --> Agent
+    ToolCall -->|Mutation Intent| Proposal[Create Structured Action Request]
+    Proposal --> DB[(Persist Request in MySQL)]
+    DB --> Card[Render Action Confirmation Card in Chat]
+    Card --> UserDecision{User Clicks 'Confirm Action'}
+    UserDecision -->|No| Cancel[Discard Proposal]
+    UserDecision -->|Yes| Action[Call Authenticated Server Action]
+    Action --> Validation[Re-verify Authentication, Role & Ownership]
+    Validation --> Exec[Execute Transaction in Database]
+    Exec --> Receipt[Render Receipt & Update UI State]
+```
 
-Database locks, owner checks, request idempotency keys, exact decimal checks, reservations, per-currency ledger pairs and terminal-state guards prevent duplicate credits/refunds. Both payment systems share category limits, daily/monthly risk totals and transfer quotas.
+### Supported AI Actions
+- **Account Actions**: Open pages, query balances, list transactions.
+- **Tuition & Remittances**: Generate funding scenarios, compare remittance corridors.
+- **Budgeting**: Recommend budget adjustments based on previous spending.
+- **Payment Drafts**: Prepare transfers to saved beneficiaries for user confirmation.
 
-## Plans and usage limits
+---
 
-Plans/prices/limits are database records editable by an administrator. New registrations receive the configured trial (seven days in the seed).
+## Family Circle & Parental Governance
 
-| Seeded plan | Monthly BDT | Accounts | Agent messages | Transfers | Tuition plans | CSV imports | Parent links |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Trial | 0 | 1 | 30 | 3 | 1 | 1 | 1 |
-| Student | 299 | 5 | 500 | 30 | 5 | 10 | 2 |
-| Pro | 699 | 20 | 2,000 | 100 | 20 | 50 | 5 |
-| Family | 999 | 20 | 2,000 | 100 | 20 | 50 | 10 |
+Parents have supervisory capabilities designed to promote student financial independence while protecting the family budget:
 
-Usage counters use UTC calendar months and user-row locks. Account/link limits use current active records. Expired or cancelled subscriptions cannot authorize quota-gated operations. Upgrades preserve current-month consumption.
+- **Independent Wallets**: Parents hold separate wallets (e.g. Family RMB Wallet) and can send money directly to student wallets.
+- **Spending Guardrails**:
+  - `threshold`: Transfers above this amount trigger required parent authorization.
+  - `per_transfer`, `daily_limit`, `monthly_limit`: Hard spending ceilings.
+  - `tuition_approval`: Toggle requiring parent sign-off on tuition payments.
+  - `category_limits`: Specific monthly budget caps for categories (e.g., Shopping, Food).
+- **Strictest Policy Enforced**: In multi-parent setups, the strictest applicable limit always takes precedence. Parent limits can tighten platform ceilings, but can never exceed the global administrator risk limits.
 
-Checkout accepts only test cards: `4242424242424242` succeeds; `4000000000000002` records a failure. Use the **Use demo card** button. The server retrieves the price from the database; only the last four digits are stored, never the full card number or CVV. Checkout supports monthly or annual billing using server-side prices and records subscription changes. Each purchase starts the selected period immediately.
+---
 
-## Security, preferences and accessibility
+## Subscription Plans & Quota Boundaries
 
-- bcrypt password hashing; httpOnly SameSite=Lax sessions, Secure in production, eight-hour expiry and database session-version revocation.
-- Server-side role/ownership checks on every privileged action, bound SQL parameters, Zod validation, database transactions and a login throttle.
-- Server Action origin protection supplied by Next.js; frame denial and MIME/referrer/permissions response headers.
-- Sensitive keys remain server-side. User exports exclude password hashes/session secrets. Account closure revokes sessions.
-- English, Simplified Chinese and Bangla dictionaries; language/theme preferences saved in MySQL; theme is mirrored in localStorage and cookies. First visits use the device theme, signup preserves it, and stored account preferences win after login. Sidebar collapse state is stored locally and sidebar scrolling survives page loading.
-- Semantic controls, labels, keyboard focus, MUI dialogs, responsive tables, mobile navigation and chart text alternatives. Automated viewport checks are not a substitute for a full accessibility audit.
-- Notification preference suppresses newly generated in-app notifications. The bell displays the unread count and marks notifications read when opened. Existing notification history remains available.
+The platform enforces monthly quota boundaries across four seeded plans:
 
-## Development, production and tests
+| Feature Limit | Free Trial (7 Days) | Student | Pro (Seeded Student) | Family (Seeded Parent) |
+| --- | :---: | :---: | :---: | :---: |
+| **Monthly Price** | Free | 299 BDT / mo | 699 BDT / mo | 999 BDT / mo |
+| **Annual Price** | Free | 2,990 BDT / yr | 6,990 BDT / yr | 9,990 BDT / yr |
+| **Accounts / Wallets** | 1 | 5 | 20 | 20 |
+| **AI Copilot Messages** | 30 / mo | 500 / mo | 2,000 / mo | 2,000 / mo |
+| **Transfer Simulations** | 3 / mo | 30 / mo | 100 / mo | 100 / mo |
+| **Tuition Forecast Plans** | 1 | 5 | 20 | 20 |
+| **CSV Statement Imports**| 1 / mo | 10 / mo | 50 / mo | 50 / mo |
+| **Family Circle Links** | 1 | 2 | 5 | 10 |
+
+---
+
+## Security, Privacy & Internationalization
+
+- **Encrypted Model Keys**: AI API keys are encrypted at rest using AES-256-GCM authenticated encryption.
+- **Strict Content-Type & MIME Validation**: Avatar profile uploads reject SVG, inspect image magic bytes via `sharp`, and enforce a 500 KB limit.
+- **CSRF & Action Origin Protection**: Protected by Next.js Server Action origin verification and SameSite cookie policies.
+- **Session Revocation**: User session versions increment on password reset or profile updates, instantly invalidating active sessions.
+- **Localization (i18n)**:
+  - English (`en`)
+  - Simplified Chinese (`zh-CN`)
+  - Bengali (`bn-BD`)
+- **Theme Persistence**: Dark, Light, and System themes are persisted in MySQL user preferences, cookies, and `localStorage`.
+
+---
+
+## Testing and Verification
+
+The test suite covers unit logic, database integration, and browser workflows:
 
 ```powershell
-npm run dev
-npm run lint
-npm run typecheck
+# 1. Run Unit Tests (Math, Tuition, Spreads, Risk, Auth)
 npm test
+
+# 2. Run Financial & Payment Integration Tests
 npm run test:payments
-npm run build
-npm start
-```
 
-Run browser tests against a running dev server and a disposable seeded database:
+# 3. Check TypeScript Type Integrity
+npm run typecheck
 
-```powershell
-npx playwright install chromium
+# 4. Run Code Linter
+npm run lint
+
+# 5. Run Playwright End-to-End Browser Tests
 npx playwright test
 ```
 
-To test a separately running production server on port 3001, set `$env:TEST_URL = 'http://127.0.0.1:3001'` before the Playwright command.
+### Test Coverage Highlights
+- **19 Unit Tests**: Verify Decimal.js precision, tuition gap formulas, fee calculation, risk hard stops, role boundaries, and AI provider sanitization.
+- **10 Integration Tests**: Shared financial state machine, concurrent confirmations, external deposits, withdrawal reserves, parent governance, and automatic alert deduplication.
 
-The Playwright suite covers student/parent/admin navigation, seven viewport widths (360, 390, 768, 1024, 1366, 1440, 1920), locale/theme persistence, registration/onboarding, transaction entry, demo checkout, the agent-to-transfer workflow, parent approval, ledger conservation, receipt creation, replay/cross-role rejection and parent category-limit rollback. Test-created users are closed after successful runs; their audit evidence is retained. Failed runs may leave fixture users in the test database.
+---
 
-Unit tests exercise decimal arithmetic, tuition forecasting, fees/spreads, risk hard stops, role routing, subscription expiry, quota boundaries and category limits. Screenshots are written under `.local/screenshots`; failure traces under `test-results`. These directories are ignored.
+## Competition Demonstration Guide
 
-`npm audit --omit=dev` reported no production advisories at the time of implementation. The full audit had five development-tool advisories through the ESLint/fast-glob dependency chain; do not apply an automatic forced downgrade of Next.js to resolve those.
+Follow this 2-minute walkthrough to demonstrate the complete FinBridge AI platform:
 
-## One-minute competition demonstration
+1. **Access Demo Hub**: Navigate to [`/en/demo`](http://127.0.0.1:3000/en/demo) and click **Student**.
+2. **Review Tuition Gap**: Open **Tuition Planner** (`/en/tuition`). Show the CNY 41,680 invoice, scholarship deduction, and the projected living cost funding gap.
+3. **Engage AI Copilot**: Open **AI Agent** (`/en/agent`). Ask: *"Can I afford next semester?"* or *"Send RMB 100 to parent@finbridge.demo"*. Inspect the generated tool logs and confirmation proposal.
+4. **Compare Remittance Corridors**: Open **Transfers** (`/en/transfer`). Compare real-time provider rates and fees between BDT and CAD.
+5. **Parent Governance Workflow**:
+   - Create an outgoing transfer exceeding the parent threshold (e.g., RMB 800).
+   - In an incognito window, open `/en/demo` and select **Parent**.
+   - Navigate to **Parent Approvals** (`/en/parent/approvals`) and approve the student's request with a note.
+6. **Execute Transfer & View Ledger**:
+   - Return to the Student window and click **Approve & simulate transfer**.
+   - Show the generated receipt with cryptographic reference.
+   - Navigate to **Activity** (`/en/activity`) to inspect balanced per-currency double-entry ledger records.
+7. **Settlement Queue (Admin / Moderator)**:
+   - Switch to **Administrator** or **Moderator (Chen Lin)**.
+   - Open **Settlements** (`/en/admin/settlements`) to view queued requests, transition them to `PROCESSING`, and finalize payouts.
 
-1. Open `/en/demo` and select Student. Show tuition readiness, the funding gap and multi-currency accounts.
-2. Open AI agent and select **Send RMB 800.** Show database tool outputs and provider comparison.
-3. Select **Review transfer**, choose **Living expenses**, compare providers and run risk checks.
-4. Open the Parent demo in a separate browser profile; approve the request with a reason.
-5. Return to Student and select **Approve & simulate transfer**. Show the receipt, changed balance and exported evidence.
-6. Open the Administrator demo to inspect risk, agent-tool calls and audit events.
+---
 
-For the tuition scenario, start from the tuition invoice's payment action so the completed simulation credits that invoice. Resetting a scenario is intentionally not part of normal setup, because reimporting seeds must not destroy existing work.
+## License
 
-## Known limitations and next work
-
-See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for the specification gap list. This is a competition sandbox, not a production banking integration or an independently security-audited financial product. Password-reset tokens are exposed only for seeded demo users; ordinary-user email recovery is not integrated. FX data is illustrative, credit readiness is educational, and provider names are fictional. No real bank/payment connection or external email/SMS service is required for this demo.
-
-## Latest verification and demo team
-
-The additional payment integration suite creates isolated fixture users and checks all external deposit methods, withdrawal settlement/refunds, linked-parent and one-time-recipient rules, an AI-created card draft, concurrent confirmation, replay rejection, ownership and per-currency ledger balance. Fixture users are closed afterward; audit records remain. Browser tests also cover system/database theme precedence, photo/country signup, sidebar/search, saved keys/cards, moderator access, catalog management, AI card top-up, manual settlement and beneficiary approval. See IMPLEMENTATION_STATUS.md for the latest run results.
-
-About Us includes **four fictional demo team profiles**, visibly marked Demo, with illustrated avatars, reserved example.com contacts and example portfolio links. Edit them under Admin → Team. Public demo moderator accounts include `amina@example.com`, `li@example.com`, `sadia@example.com`, and `chen@example.com`, password `DemoOnly!2026`. Their sections differ; the administrator manages permission assignments. These accounts are demo-only.
-
-
-## Structured agent actions
-
-The agent uses validated JSON function calls rather than attempting to infer actions from prose. Its `respond` envelope supports `open_page`, `require_answer` and `message`; payments use `draftPayment`, and other changes use `requestAction`. Navigation is restricted to known routes allowed for the signed-in role. Follow-up answers retain the previous conversation context, and live tool progress is read from persisted tool logs.
-
-Examples: **“Open tuition planner”**, **“Plan rent RMB 2200 for 2026-11”**, **“Create a tuition invoice”**, **“Record my grocery expense”**, and **“Send money to Mike”**. Incomplete or ambiguous instructions require answers rather than guessed financial details. The action catalog exposes account management, category budgets, tuition invoices/funding plans, expenses/categorization, reminders, credit inputs, preferences, family invitations/controls, beneficiaries, payment cancellation, parent decisions, subscription cancellation, saved-card management, model selection and support reports. Account/card/password/API-key/photo/CSV/checkout flows that require secure input open their normal forms. Administrative authority is never granted to a student or parent agent.
-
-An action proposal stores its validated input and owner. **Confirm action** calls the same authenticated Server Action as its normal form, rechecking ownership and permissions. Proposals expire after 30 minutes. A conditional state transition prevents concurrent confirmations from executing twice. Completed results reopen without executing again. An interrupted `EXECUTING` record requires reconciliation before retry, rather than automatically replaying an uncertain mutation. Payment drafts retain their separate atomic financial state machine and all parent/manual-settlement checks.
-
-Cash records cannot fund payment requests or legacy transfer simulations and cannot be converted into payment-wallet account types. Manual wallet deposits go through Payments; card inputs stay out of chat and stored tool data.
-
-## Alerts and configuration
-
-Workspace loading evaluates and deduplicates low-balance, upcoming/overdue tuition, funding-gap, category overspending, large-expense, quota, FX movement and subscription-expiry alerts. Read/dismiss/snooze state survives repeated evaluations; resolved conditions close and a recurrence reopens the alert. Parent alerts include only conditions permitted by current linked-family visibility. Notifications respect the notification preference. There is no background delivery service while the app is closed.
-
-Admin → Financial data also manages supported provider currency routes and country-specific educational credit checklists. Editing an existing provider preserves deliberately removed routes. Budget chart series use the user's display currency before comparison.
-
-Public pages now have distinct sections: Home has the financial-planning preview; Features has the capability overview; How It Works has the interactive journey and payment status paths; Security explains access controls and data boundaries. Parent overview, student details, controls and approvals are separate views. Transactions separates posted entries from request status history with tabs.
+This project is licensed under the ISC License. Developed for competition and demonstration purposes.

@@ -24,6 +24,7 @@ import {
 import { formatMoney } from "@/lib/money";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { parseJson } from "@/lib/json";
 export function FamilyPage({ data, path }: { data: Workspace; path: string }) {
   const { t, locale, run, toast } = useApp();
   const [dialog, setDialog] = useState("");
@@ -93,7 +94,7 @@ export function FamilyPage({ data, path }: { data: Workspace; path: string }) {
           {data.family
             .filter((f) => f.status !== "REVOKED")
             .map((f) => {
-              const visibility = JSON.parse(String(f.visibility)) as Record<
+              const visibility = parseJson<Record<string, boolean>>(f.visibility, {}) as Record<
                 string,
                 boolean
               >;
@@ -398,7 +399,7 @@ export function FamilyPage({ data, path }: { data: Workspace; path: string }) {
             ),
             ...Object.fromEntries(
               Object.entries(
-                JSON.parse(String(selected.category_limits || "{}")),
+                parseJson<Record<string, string>>(selected.category_limits, {}),
               ).map(([k, v]) => [
                 `limit_${k}`,
                 (Number(v) * Number(data.rates.CNY)).toFixed(2),

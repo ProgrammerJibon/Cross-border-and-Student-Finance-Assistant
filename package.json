@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "rmdir .next /s /q && next build && xcopy \"public\" \".next\\standalone\\public\" /E /I /Y && xcopy \".next\\static\" \".next\\standalone\\.next\\static\" /E /I /Y && copy \".env.production\" \".next\\standalone\\.env.production\" /Y && exit 0",
+    "build": "rmdir .next /s /q && next build && xcopy \"public\" \".next\\standalone\\public\" /E /I /Y && xcopy \".next\\static\" \".next\\standalone\\.next\\static\" /E /I /Y && copy \".env.production\" \".next\\standalone\\.env.production\" /Y && copy \".env.production\" \".next\\standalone\\.env\" /Y && node scripts/patch-standalone.mjs && exit 0",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

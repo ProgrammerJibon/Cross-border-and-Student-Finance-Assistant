@@ -20,6 +20,7 @@ import {
 import { formatMoney } from "@/lib/money";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { parseJson } from "@/lib/json";
 export function Plans({
   plans,
   publicPage = false,
@@ -44,7 +45,7 @@ export function Plans({
           </div>
           <ul>
             {Object.entries(
-              JSON.parse(String(p.limits)) as Record<string, number>,
+              parseJson<Record<string, number>>(p.limits, {}),
             ).map(([k, v]) => (
               <li key={k}>
                 <FiCheck />
@@ -92,7 +93,7 @@ export function SubscriptionPage({
   } | null>(null);
   const sub = data.subscription[0];
   const limits = sub
-    ? (JSON.parse(String(sub.limits)) as Record<string, number>)
+    ? parseJson<Record<string, number>>(sub.limits, {})
     : {};
   if (checkout)
     return (

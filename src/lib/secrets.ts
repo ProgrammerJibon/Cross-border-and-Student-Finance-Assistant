@@ -1,4 +1,5 @@
 import "server-only";
+import "./env";
 import {
   createCipheriv,
   createDecipheriv,
@@ -22,9 +23,15 @@ export function encryptSecret(secret: string) {
     .map((b) => b.toString("base64"))
     .join(".");
 }
-export function decryptSecret(value: string) {
-  const [iv, tag, data] = value.split(".").map((v) => Buffer.from(v, "base64"));
-  const cipher = createDecipheriv("aes-256-gcm", encryptionKey(), iv);
-  cipher.setAuthTag(tag);
-  return Buffer.concat([cipher.update(data), cipher.final()]).toString("utf8");
+
+export function decryptSecret(payload: string) {
+  const parts = payload.split(".");
+  if (parts.length !== 3) throw new Error("Malformed cipher");
+  const [iv, tag, data] = parts.map((v) => Buffer.from(v, "base64"));
+  const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([
+    decipher.update(data),
+    decipher.final(),
+  ]).toString("utf8");
 }

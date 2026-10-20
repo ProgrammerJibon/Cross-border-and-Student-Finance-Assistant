@@ -32,6 +32,7 @@ import { currencyOptions } from "@/components/accounts/money-page";
 import { formatMoney } from "@/lib/money";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { parseJson } from "@/lib/json";
 type Quote = Extract<
   Awaited<ReturnType<typeof compareTransfers>>,
   { success: true }
@@ -265,7 +266,7 @@ function TransferReview({
       ? {
           id: String(existing.id),
           status: String(existing.status),
-          risk: existing.risk ? JSON.parse(String(existing.risk)) : null,
+          risk: existing.risk ? parseJson(existing.risk, null) : null,
         }
       : null,
   );

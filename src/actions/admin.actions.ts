@@ -1,4 +1,5 @@
 "use server";
+import { parseJson } from "@/lib/json";
 import {
   riskPolicySchema,
   creditKeys,
@@ -361,7 +362,7 @@ export async function saveCreditGuidance(input: unknown) {
         [],
         db,
       );
-      const settings = JSON.parse(r?.value || "{}");
+      const settings = parseJson<Record<string, string[]>>(r?.value, {});
       settings[v.country] = v.tasks;
       await write(
         "INSERT INTO admin_settings (name,value) VALUES ('creditGuidance',?) ON DUPLICATE KEY UPDATE value=VALUES(value)",

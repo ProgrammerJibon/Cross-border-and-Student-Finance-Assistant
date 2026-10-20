@@ -25,6 +25,7 @@ import {
 import { adminSections } from "@/lib/admin-permissions";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { parseJson } from "@/lib/json";
 const bool = [
   { value: "1", label: "active" },
   { value: "0", label: "disabled" },
@@ -379,7 +380,7 @@ export function TeamAdmin({ data }: { data: Workspace }) {
       avatar: String(row.avatar || ""),
       password: "",
     });
-    setPermissions(JSON.parse(String(row.admin_permissions || "[]")));
+    setPermissions(parseJson<string[]>(row.admin_permissions, []));
   };
   return (
     <>

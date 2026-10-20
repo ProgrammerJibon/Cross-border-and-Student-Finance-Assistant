@@ -5,6 +5,7 @@ import { atomic, write, rows } from "@/lib/db";
 import { z } from "zod";
 import { validCurrency } from "@/lib/catalog";
 import { action, requireCondition } from "@/lib/errors";
+import { parseJson } from "@/lib/json";
 import { budgetSchema } from "@/lib/validation";
 import { audit } from "@/lib/audit";
 export async function saveBudget(input: unknown) {
@@ -43,7 +44,7 @@ export async function saveAgentBudget(runId: string) {
         db,
       );
       requireCondition(run, "NOT_FOUND");
-      const raw = JSON.parse(run.result).outputs?.generateBudgetSuggestion;
+      const raw = parseJson<{ outputs?: { generateBudgetSuggestion?: unknown } }>(run.result, {}).outputs?.generateBudgetSuggestion;
       const proposal = z
         .object({
           currency: z.string().length(3),

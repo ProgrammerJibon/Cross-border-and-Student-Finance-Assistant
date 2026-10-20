@@ -19,12 +19,17 @@ import { activeProvider } from "@/ai/provider";
 import { hasPermission } from "@/lib/admin-permissions";
 import { canOpen } from "@/lib/permissions";
 import { translator } from "@/lib/i18n";
+import { parseJson } from "@/lib/json";
 export async function getDashboardData() {
   return action(async () => {
     const user = await requireUser();
     const student = user.role === "STUDENT",
       admin = user.role === "ADMIN" || user.role === "MODERATOR";
-    await syncAutomaticAlerts(user.id);
+    try {
+      await syncAutomaticAlerts(user.id);
+    } catch (e) {
+      console.error("syncAutomaticAlerts error:", e);
+    }
     const rates = await getRates();
     const rateHistory = student ? await getRateHistory() : [];
     const [
@@ -190,7 +195,7 @@ export async function getDashboardData() {
     }[] = [];
     if (user.role === "PARENT")
       for (const f of family.filter((f) => f.status === "LINKED")) {
-        const v = JSON.parse(String(f.visibility));
+        const v = parseJson<Record<string, boolean>>(f.visibility, {});
         parentStudents.push({
           link: f,
           accounts: v.balances

@@ -27,6 +27,7 @@ import {
 } from "@/actions/payment.actions";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { parseJson } from "@/lib/json";
 import { formatMoney } from "@/lib/money";
 
 type PaymentData = Extract<
@@ -234,7 +235,7 @@ export function PaymentsPanel({
                   setForm((f) => ({
                     ...f,
                     currencies: (
-                      JSON.parse(String(r.currencies)) as string[]
+                      parseJson<string[]>(r.currencies, [])
                     ).join(", "),
                   }));
                   setModal("method");

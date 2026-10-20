@@ -1,4 +1,5 @@
 "use server";
+import { parseJson } from "@/lib/json";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { atomic, rows, write } from "@/lib/db";
@@ -112,7 +113,7 @@ export async function confirmAgentAction(requestId: string) {
         def && (def.roles as readonly string[]).includes(u.role),
         "FORBIDDEN",
       );
-      def.schema.parse(JSON.parse(r.input_json));
+      def.schema.parse(parseJson(r.input_json, {}));
       await write(
         "UPDATE agent_action_requests SET status='EXECUTING' WHERE id=?",
         [requestId],
@@ -123,10 +124,10 @@ export async function confirmAgentAction(requestId: string) {
     if (proposal.status === "COMPLETED")
       return {
         status: "COMPLETED",
-        result: JSON.parse(proposal.result_json || "null") as unknown,
+        result: parseJson(proposal.result_json, null) as unknown,
       };
     const input = agentActionCatalog[proposal.action_name].schema.parse(
-      JSON.parse(proposal.input_json),
+      parseJson(proposal.input_json, {}),
     ) as Record<string, unknown>;
     let result: Result<unknown>;
     try {

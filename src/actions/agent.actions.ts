@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { parseJson } from "@/lib/json";
 import { atomic, write, rows } from "@/lib/db";
 import { action, requireCondition } from "@/lib/errors";
 import { audit } from "@/lib/audit";
@@ -34,7 +35,12 @@ export async function askAgent(
           [cursor, u.id],
         );
         requireCondition(prior, "NOT_FOUND");
-        const result = prior.result ? JSON.parse(prior.result) : {};
+        const result = prior.result
+          ? parseJson<{ outputs?: Record<string, unknown>; summary?: unknown }>(
+              prior.result,
+              {},
+            )
+          : {};
         const confirmed = await rows(
           "SELECT action_name,status,result_json FROM agent_action_requests WHERE run_id=? AND user_id=?",
           [cursor, u.id],

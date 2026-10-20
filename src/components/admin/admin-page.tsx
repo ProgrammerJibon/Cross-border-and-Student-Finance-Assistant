@@ -30,6 +30,7 @@ import {
 import { currencyOptions } from "@/components/accounts/money-page";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { parseJson } from "@/lib/json";
 const boolOptions = [
   { value: "1", label: "active" },
   { value: "0", label: "cancel" },
@@ -348,7 +349,7 @@ export function AdminPage({ data, path }: { data: Workspace; path: string }) {
     Object.entries(selected || {}).map(([k, v]) => [k, String(v ?? "")]),
   );
   if (dialog === "plan")
-    Object.assign(initial, JSON.parse(String(selected?.limits || "{}")));
+    Object.assign(initial, parseJson(selected?.limits, {}));
   const fields: Record<string, Field[]> = {
     user: [
       {
@@ -539,7 +540,7 @@ export function AdminPage({ data, path }: { data: Workspace; path: string }) {
                 <details key={String(tool.id)}>
                   <summary>{t(String(tool.name))}</summary>
                   <pre className="json-block">
-                    {JSON.stringify(JSON.parse(String(tool.output)), null, 2)}
+                    {JSON.stringify(parseJson(tool.output, {}), null, 2)}
                   </pre>
                 </details>
               ))}

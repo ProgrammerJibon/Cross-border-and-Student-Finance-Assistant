@@ -1,3 +1,4 @@
+import { parseJson } from "@/lib/json";
 import "server-only";
 import { z } from "zod";
 import { rows, type DB } from "@/lib/db";
@@ -22,7 +23,7 @@ export async function getRiskPolicy(db?: DB) {
     db,
   );
   try {
-    return riskPolicySchema.parse(r ? JSON.parse(r.value) : defaultRiskPolicy);
+    return riskPolicySchema.parse(r ? parseJson(r.value, defaultRiskPolicy) : defaultRiskPolicy);
   } catch {
     return defaultRiskPolicy;
   }
@@ -42,7 +43,7 @@ export async function getCreditGuidance(userId: string) {
     [userId],
   );
   try {
-    const settings = JSON.parse(r?.value || "{}");
+    const settings = parseJson<Record<string, string[]>>(r?.value, {});
     return z
       .array(z.enum(creditKeys))
       .min(1)

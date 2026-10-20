@@ -1,3 +1,4 @@
+import { parseJson } from "@/lib/json";
 import { rows, type DB } from "@/lib/db";
 import { D, money } from "@/lib/money";
 import { requireCondition } from "@/lib/errors";
@@ -29,7 +30,7 @@ export async function checkCategoryLimit(
   );
   const limits = controls.flatMap((c) => {
     const value = c.category_limits
-      ? (JSON.parse(c.category_limits) as Record<string, string>)[category]
+      ? parseJson<Record<string, string>>(c.category_limits, {})[category]
       : undefined;
     return value === undefined ? [] : [String(value)];
   });
