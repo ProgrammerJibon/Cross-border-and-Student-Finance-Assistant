@@ -1,0 +1,48 @@
+{
+  "slide_count": 13,
+  "source_unchanged": true,
+  "developer_position": 2,
+  "developer_avatars": 0,
+  "cover_has_only_product_title": true,
+  "slide_numbers_removed": true,
+  "all_backgrounds_dark": true,
+  "logo_application_references": [],
+  "powerpoint_text_overflow": [],
+  "preserved_source_content": [
+    {
+      "source_slide": 4,
+      "v2_slide": 4,
+      "retained_text_elements": 11
+    },
+    {
+      "source_slide": 5,
+      "v2_slide": 5,
+      "retained_text_elements": 22
+    },
+    {
+      "source_slide": 6,
+      "v2_slide": 6,
+      "retained_text_elements": 21
+    },
+    {
+      "source_slide": 7,
+      "v2_slide": 7,
+      "retained_text_elements": 19
+    },
+    {
+      "source_slide": 8,
+      "v2_slide": 8,
+      "retained_text_elements": 16
+    },
+    {
+      "source_slide": 9,
+      "v2_slide": 9,
+      "retained_text_elements": 16
+    },
+    {
+      "source_slide": 10,
+      "v2_slide": 11,
+      "retained_text_elements": 15
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">FinBridge AI</title>
+  <desc id="desc">A bridge connecting the two pages of an open book: family funding reaching a student's future.</desc>
+  <path d="M39 157C52 102 84 65 128 65s76 37 89 92" fill="none" stroke="#63E6BE" stroke-width="17" stroke-linecap="round"/>
+  <path d="M75 119v58M181 119v58" fill="none" stroke="#63E6BE" stroke-width="13" stroke-linecap="round"/>
+  <path d="M35 169c35 0 66 11 93 31v-27c-27-20-58-31-93-31z" fill="#6BB9FF"/>
+  <path d="M221 169c-35 0-66 11-93 31v-27c27-20 58-31 93-31z" fill="#63E6BE"/>
+  <path d="M128 173v27" fill="none" stroke="#080F1B" stroke-width="5"/>
+</svg>

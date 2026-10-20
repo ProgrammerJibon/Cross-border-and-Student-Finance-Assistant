@@ -1,0 +1,1582 @@
+[
+  {
+    "slide": 1,
+    "texts": [
+      {
+        "id": 2,
+        "name": "reveal_01",
+        "text": "FinBridge AI",
+        "x": 0.65,
+        "y": 2.1,
+        "w": 6.2,
+        "h": 1.0
+      },
+      {
+        "id": 3,
+        "name": "reveal_02",
+        "text": "An AI financial copilot helping students and families plan tuition, manage money and navigate cross-border funding.",
+        "x": 0.69,
+        "y": 3.37,
+        "w": 5.4,
+        "h": 1.65
+      }
+    ]
+  },
+  {
+    "slide": 2,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "DEVELOPER INTRODUCTION",
+        "x": 0.55,
+        "y": 0.22,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "The team behind FinBridge AI",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "10 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 7,
+        "name": "reveal_04",
+        "text": "Developer 1",
+        "x": 1.02,
+        "y": 4.58,
+        "w": 3.6,
+        "h": 0.53
+      },
+      {
+        "id": 8,
+        "name": "reveal_04",
+        "text": "AI & Backend",
+        "x": 1.02,
+        "y": 5.28,
+        "w": 3.6,
+        "h": 0.36
+      },
+      {
+        "id": 10,
+        "name": "reveal_05",
+        "text": "Developer 2",
+        "x": 8.22,
+        "y": 4.58,
+        "w": 3.6,
+        "h": 0.53
+      },
+      {
+        "id": 11,
+        "name": "reveal_05",
+        "text": "Frontend & UX",
+        "x": 8.22,
+        "y": 5.28,
+        "w": 3.6,
+        "h": 0.36
+      },
+      {
+        "id": 13,
+        "name": "TextBox 12",
+        "text": "Demo portraits, names and roles — replace with your team.",
+        "x": 0.72,
+        "y": 6.54,
+        "w": 11.9,
+        "h": 0.3
+      }
+    ]
+  },
+  {
+    "slide": 3,
+    "texts": [
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "PROBLEM STATEMENT\nA bank balance is not tuition readiness.",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.97
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "Living costs, future income and transfer fees all change what a student can actually afford.",
+        "x": 0.58,
+        "y": 6.91,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 8,
+        "name": "TextBox 7",
+        "text": "TUITION FUNDING BRIDGE",
+        "x": 0.8,
+        "y": 2.32,
+        "w": 7.5,
+        "h": 0.27
+      },
+      {
+        "id": 10,
+        "name": "TextBox 9",
+        "text": "0k",
+        "x": 0.85,
+        "y": 5.85,
+        "w": 0.5,
+        "h": 0.2
+      },
+      {
+        "id": 12,
+        "name": "TextBox 11",
+        "text": "10k",
+        "x": 0.85,
+        "y": 5.14,
+        "w": 0.5,
+        "h": 0.2
+      },
+      {
+        "id": 14,
+        "name": "TextBox 13",
+        "text": "20k",
+        "x": 0.85,
+        "y": 4.42,
+        "w": 0.5,
+        "h": 0.2
+      },
+      {
+        "id": 16,
+        "name": "TextBox 15",
+        "text": "30k",
+        "x": 0.85,
+        "y": 3.71,
+        "w": 0.5,
+        "h": 0.2
+      },
+      {
+        "id": 18,
+        "name": "TextBox 17",
+        "text": "40k",
+        "x": 0.85,
+        "y": 3.0,
+        "w": 0.5,
+        "h": 0.2
+      },
+      {
+        "id": 21,
+        "name": "TextBox 20",
+        "text": "Now",
+        "x": 1.42,
+        "y": 6.13,
+        "w": 1.25,
+        "h": 0.29
+      },
+      {
+        "id": 24,
+        "name": "TextBox 23",
+        "text": "+ Income",
+        "x": 2.71,
+        "y": 6.13,
+        "w": 1.25,
+        "h": 0.29
+      },
+      {
+        "id": 27,
+        "name": "TextBox 26",
+        "text": "− Living",
+        "x": 4.0,
+        "y": 6.13,
+        "w": 1.25,
+        "h": 0.29
+      },
+      {
+        "id": 30,
+        "name": "TextBox 29",
+        "text": "Projected",
+        "x": 5.29,
+        "y": 6.13,
+        "w": 1.25,
+        "h": 0.29
+      },
+      {
+        "id": 33,
+        "name": "TextBox 32",
+        "text": "Tuition",
+        "x": 6.58,
+        "y": 6.13,
+        "w": 1.25,
+        "h": 0.29
+      },
+      {
+        "id": 34,
+        "name": "TextBox 33",
+        "text": "CNY · two-month example · scholarship = 0",
+        "x": 0.84,
+        "y": 6.47,
+        "w": 7.3,
+        "h": 0.22
+      },
+      {
+        "id": 37,
+        "name": "TextBox 36",
+        "text": "83%",
+        "x": 9.88,
+        "y": 3.5,
+        "w": 1.8,
+        "h": 0.6
+      },
+      {
+        "id": 38,
+        "name": "TextBox 37",
+        "text": "funded",
+        "x": 10.07,
+        "y": 4.13,
+        "w": 1.4,
+        "h": 0.28
+      },
+      {
+        "id": 39,
+        "name": "TextBox 38",
+        "text": "UNFUNDED TUITION",
+        "x": 9.16,
+        "y": 5.55,
+        "w": 3.2,
+        "h": 0.25
+      },
+      {
+        "id": 40,
+        "name": "reveal_06",
+        "text": "CNY 6,750",
+        "x": 9.16,
+        "y": 5.93,
+        "w": 3.2,
+        "h": 0.55
+      }
+    ]
+  },
+  {
+    "slide": 4,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "REAL-WORLD STRUGGLES",
+        "x": 0.55,
+        "y": 0.3,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "Real-world struggles: one deadline, two countries.",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "Illustrative scenario: a Bangladeshi student in China must keep paying living costs while preparing tuition.",
+        "x": 0.57,
+        "y": 1.52,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 6,
+        "name": "TextBox 5",
+        "text": "03 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 8,
+        "name": "TextBox 7",
+        "text": "FUNDING RUNWAY · CNY",
+        "x": 0.8,
+        "y": 2.32,
+        "w": 6.7,
+        "h": 0.27
+      },
+      {
+        "id": 12,
+        "name": "TextBox 11",
+        "text": "Extra savings needed",
+        "x": 8.29,
+        "y": 5.28,
+        "w": 2.3,
+        "h": 0.25
+      },
+      {
+        "id": 13,
+        "name": "reveal_05",
+        "text": "3,375 / mo",
+        "x": 10.49,
+        "y": 5.28,
+        "w": 2.05,
+        "h": 0.35
+      },
+      {
+        "id": 15,
+        "name": "reveal_05",
+        "text": "Rent continues",
+        "x": 0.72,
+        "y": 6.26,
+        "w": 3.68,
+        "h": 0.27
+      },
+      {
+        "id": 16,
+        "name": "reveal_05",
+        "text": "CNY 2,125 / month",
+        "x": 0.7,
+        "y": 6.64,
+        "w": 3.72,
+        "h": 0.22
+      },
+      {
+        "id": 18,
+        "name": "reveal_06",
+        "text": "Family funds in BDT",
+        "x": 4.86,
+        "y": 6.26,
+        "w": 3.68,
+        "h": 0.27
+      },
+      {
+        "id": 19,
+        "name": "reveal_06",
+        "text": "Compare total FX cost",
+        "x": 4.84,
+        "y": 6.64,
+        "w": 3.72,
+        "h": 0.22
+      },
+      {
+        "id": 21,
+        "name": "reveal_07",
+        "text": "Tuition approaches",
+        "x": 9.0,
+        "y": 6.26,
+        "w": 3.68,
+        "h": 0.27
+      },
+      {
+        "id": 22,
+        "name": "reveal_07",
+        "text": "Close the CNY 6,750 gap",
+        "x": 8.98,
+        "y": 6.64,
+        "w": 3.72,
+        "h": 0.22
+      }
+    ]
+  },
+  {
+    "slide": 5,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "OUR SOLUTION",
+        "x": 0.55,
+        "y": 0.3,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "See the gap. Compare the cost. Coordinate the funding.",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "One workspace links tuition planning, cross-border comparison, parent approval and payment evidence.",
+        "x": 0.57,
+        "y": 1.52,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 6,
+        "name": "TextBox 5",
+        "text": "04 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 8,
+        "name": "TextBox 7",
+        "text": "SEND BDT → RECEIVE CNY 6,750",
+        "x": 0.8,
+        "y": 2.35,
+        "w": 6.7,
+        "h": 0.3
+      },
+      {
+        "id": 9,
+        "name": "TextBox 8",
+        "text": "Extra sender cost vs lowest quote | BDT",
+        "x": 0.83,
+        "y": 2.87,
+        "w": 6.7,
+        "h": 0.3
+      },
+      {
+        "id": 11,
+        "name": "TextBox 10",
+        "text": "Extra cost vs lowest quote | sandbox seed rates | fees + spread included",
+        "x": 0.83,
+        "y": 5.92,
+        "w": 6.7,
+        "h": 0.26
+      },
+      {
+        "id": 13,
+        "name": "TextBox 12",
+        "text": "FUNDING GAP",
+        "x": 8.38,
+        "y": 2.4,
+        "w": 3.9,
+        "h": 0.25
+      },
+      {
+        "id": 14,
+        "name": "reveal_03",
+        "text": "CNY 6,750",
+        "x": 8.38,
+        "y": 2.78,
+        "w": 3.9,
+        "h": 0.55
+      },
+      {
+        "id": 15,
+        "name": "TextBox 14",
+        "text": "LOWEST DEMO QUOTE",
+        "x": 8.38,
+        "y": 3.62,
+        "w": 3.9,
+        "h": 0.25
+      },
+      {
+        "id": 16,
+        "name": "reveal_04",
+        "text": "BDT 115,434",
+        "x": 8.38,
+        "y": 4.0,
+        "w": 3.9,
+        "h": 0.55
+      },
+      {
+        "id": 17,
+        "name": "TextBox 16",
+        "text": "QUOTE DIFFERENCE",
+        "x": 8.38,
+        "y": 4.84,
+        "w": 3.9,
+        "h": 0.25
+      },
+      {
+        "id": 18,
+        "name": "reveal_05",
+        "text": "BDT 2,914",
+        "x": 8.38,
+        "y": 5.22,
+        "w": 3.9,
+        "h": 0.55
+      },
+      {
+        "id": 20,
+        "name": "reveal_04",
+        "text": "Plan",
+        "x": 0.72,
+        "y": 6.31,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 21,
+        "name": "reveal_04",
+        "text": "Tuition + budget",
+        "x": 0.7,
+        "y": 6.69,
+        "w": 2.67,
+        "h": 0.22
+      },
+      {
+        "id": 22,
+        "name": "TextBox 21",
+        "text": "→",
+        "x": 3.48,
+        "y": 6.41,
+        "w": 0.24,
+        "h": 0.31
+      },
+      {
+        "id": 24,
+        "name": "reveal_05",
+        "text": "Compare",
+        "x": 3.82,
+        "y": 6.31,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 25,
+        "name": "reveal_05",
+        "text": "Fees + FX",
+        "x": 3.8,
+        "y": 6.69,
+        "w": 2.67,
+        "h": 0.22
+      },
+      {
+        "id": 26,
+        "name": "TextBox 25",
+        "text": "→",
+        "x": 6.58,
+        "y": 6.41,
+        "w": 0.24,
+        "h": 0.31
+      },
+      {
+        "id": 28,
+        "name": "reveal_06",
+        "text": "Approve",
+        "x": 6.92,
+        "y": 6.31,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 29,
+        "name": "reveal_06",
+        "text": "User + parent",
+        "x": 6.9,
+        "y": 6.69,
+        "w": 2.67,
+        "h": 0.22
+      },
+      {
+        "id": 30,
+        "name": "TextBox 29",
+        "text": "→",
+        "x": 9.68,
+        "y": 6.41,
+        "w": 0.24,
+        "h": 0.31
+      },
+      {
+        "id": 32,
+        "name": "reveal_07",
+        "text": "Record",
+        "x": 10.02,
+        "y": 6.31,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 33,
+        "name": "reveal_07",
+        "text": "Receipt + ledger",
+        "x": 10.0,
+        "y": 6.69,
+        "w": 2.67,
+        "h": 0.22
+      }
+    ]
+  },
+  {
+    "slide": 6,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "OUR IMPLEMENTATION / AI FIRST",
+        "x": 0.55,
+        "y": 0.3,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "The AI turns financial questions into reviewed actions.",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "Application-owned tools ground the answer; confirmation and server checks control execution.",
+        "x": 0.57,
+        "y": 1.52,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 6,
+        "name": "TextBox 5",
+        "text": "05 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 9,
+        "name": "TextBox 8",
+        "text": "APPLICATION TOOL GRAPH",
+        "x": 7.61,
+        "y": 2.35,
+        "w": 4.9,
+        "h": 0.28
+      },
+      {
+        "id": 11,
+        "name": "reveal_03",
+        "text": "getAccounts + getWorkspaceData",
+        "x": 7.94,
+        "y": 2.94,
+        "w": 4.52,
+        "h": 0.3
+      },
+      {
+        "id": 12,
+        "name": "reveal_03",
+        "text": "Balances, invoice and spending",
+        "x": 7.94,
+        "y": 3.31,
+        "w": 4.52,
+        "h": 0.25
+      },
+      {
+        "id": 14,
+        "name": "reveal_04",
+        "text": "calculateTuitionGap",
+        "x": 7.94,
+        "y": 3.8,
+        "w": 4.52,
+        "h": 0.3
+      },
+      {
+        "id": 15,
+        "name": "reveal_04",
+        "text": "CNY 6,750 gap → CNY 3,375 / month",
+        "x": 7.94,
+        "y": 4.17,
+        "w": 4.52,
+        "h": 0.25
+      },
+      {
+        "id": 17,
+        "name": "reveal_05",
+        "text": "requestAction → confirmAgentAction",
+        "x": 7.94,
+        "y": 4.66,
+        "w": 4.52,
+        "h": 0.3
+      },
+      {
+        "id": 18,
+        "name": "reveal_05",
+        "text": "Structured proposal → explicit review",
+        "x": 7.94,
+        "y": 5.03,
+        "w": 4.52,
+        "h": 0.25
+      },
+      {
+        "id": 19,
+        "name": "TextBox 18",
+        "text": "Gemini  ·  OpenAI  ·  deterministic mock",
+        "x": 7.64,
+        "y": 5.61,
+        "w": 4.86,
+        "h": 0.25
+      },
+      {
+        "id": 21,
+        "name": "reveal_04",
+        "text": "React / Next.js",
+        "x": 0.72,
+        "y": 6.26,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 22,
+        "name": "reveal_04",
+        "text": "User workspace",
+        "x": 0.7,
+        "y": 6.64,
+        "w": 2.67,
+        "h": 0.22
+      },
+      {
+        "id": 23,
+        "name": "TextBox 22",
+        "text": "→",
+        "x": 3.49,
+        "y": 6.37,
+        "w": 0.23,
+        "h": 0.32
+      },
+      {
+        "id": 25,
+        "name": "reveal_05",
+        "text": "AI + Zod",
+        "x": 3.82,
+        "y": 6.26,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 26,
+        "name": "reveal_05",
+        "text": "Validated tools",
+        "x": 3.8,
+        "y": 6.64,
+        "w": 2.67,
+        "h": 0.22
+      },
+      {
+        "id": 27,
+        "name": "TextBox 26",
+        "text": "→",
+        "x": 6.59,
+        "y": 6.37,
+        "w": 0.23,
+        "h": 0.32
+      },
+      {
+        "id": 29,
+        "name": "reveal_06",
+        "text": "Server Actions",
+        "x": 6.92,
+        "y": 6.26,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 30,
+        "name": "reveal_06",
+        "text": "Auth / role / risk",
+        "x": 6.9,
+        "y": 6.64,
+        "w": 2.67,
+        "h": 0.22
+      },
+      {
+        "id": 31,
+        "name": "TextBox 30",
+        "text": "→",
+        "x": 9.69,
+        "y": 6.37,
+        "w": 0.23,
+        "h": 0.32
+      },
+      {
+        "id": 33,
+        "name": "reveal_07",
+        "text": "MySQL ledger",
+        "x": 10.02,
+        "y": 6.26,
+        "w": 2.63,
+        "h": 0.27
+      },
+      {
+        "id": 34,
+        "name": "reveal_07",
+        "text": "Locks / idempotency",
+        "x": 10.0,
+        "y": 6.64,
+        "w": 2.67,
+        "h": 0.22
+      }
+    ]
+  },
+  {
+    "slide": 7,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "FEATURES / STUDENT",
+        "x": 0.55,
+        "y": 0.3,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "Student features",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "Track everyday money, plan tuition and act with the AI copilot.",
+        "x": 0.57,
+        "y": 1.52,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 6,
+        "name": "TextBox 5",
+        "text": "06 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 8,
+        "name": "TextBox 7",
+        "text": "BUDGET VS SPENDING · CNY",
+        "x": 0.8,
+        "y": 2.32,
+        "w": 5.8,
+        "h": 0.3
+      },
+      {
+        "id": 10,
+        "name": "TextBox 9",
+        "text": "Illustrative monthly budget: housing is CNY 100 over plan.",
+        "x": 0.82,
+        "y": 5.1,
+        "w": 5.7,
+        "h": 0.29
+      },
+      {
+        "id": 12,
+        "name": "TextBox 11",
+        "text": "ACTUAL DEMO UI",
+        "x": 4.02,
+        "y": 5.7,
+        "w": 2.5,
+        "h": 0.25
+      },
+      {
+        "id": 13,
+        "name": "TextBox 12",
+        "text": "Category progress\nand overspend alerts",
+        "x": 4.02,
+        "y": 6.08,
+        "w": 2.5,
+        "h": 0.6
+      },
+      {
+        "id": 15,
+        "name": "reveal_04",
+        "text": "Accounts & activity",
+        "x": 7.43,
+        "y": 2.11,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 16,
+        "name": "reveal_04",
+        "text": "Multi-currency wallets, cash, transactions, categories, search/filter, CSV mapping/import.",
+        "x": 7.43,
+        "y": 2.43,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 18,
+        "name": "reveal_05",
+        "text": "Tuition & planning",
+        "x": 7.43,
+        "y": 2.86,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 19,
+        "name": "reveal_05",
+        "text": "Invoices, scholarships, deadlines, savings scenarios, category budgets, credit guidance.",
+        "x": 7.43,
+        "y": 3.18,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 21,
+        "name": "reveal_06",
+        "text": "Payments & transfers",
+        "x": 7.43,
+        "y": 3.61,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 22,
+        "name": "reveal_06",
+        "text": "FX/providers, quotes, sends, top-ups, manual deposits, withdrawals, recipients and receipts.",
+        "x": 7.43,
+        "y": 3.93,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 24,
+        "name": "reveal_07",
+        "text": "AI copilot",
+        "x": 7.43,
+        "y": 4.36,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 25,
+        "name": "reveal_07",
+        "text": "Chat/tool history, advice, follow-ups, navigation, reviewed actions and model selection.",
+        "x": 7.43,
+        "y": 4.68,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 27,
+        "name": "reveal_08",
+        "text": "Family & notifications",
+        "x": 7.43,
+        "y": 5.11,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 28,
+        "name": "reveal_08",
+        "text": "Invitations, recipient/transfer approvals, reminders, alerts/snooze and ledger history.",
+        "x": 7.43,
+        "y": 5.43,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 30,
+        "name": "reveal_09",
+        "text": "Personal account",
+        "x": 7.43,
+        "y": 5.86,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 31,
+        "name": "reveal_09",
+        "text": "Plans/quotas/history, saved cards/models, profile/security, reports, export and closure.",
+        "x": 7.43,
+        "y": 6.18,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 32,
+        "name": "TextBox 31",
+        "text": "3 languages · themes · country/currency · time zone · search",
+        "x": 7.43,
+        "y": 6.78,
+        "w": 5.13,
+        "h": 0.23
+      }
+    ]
+  },
+  {
+    "slide": 8,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "FEATURES / PARENT",
+        "x": 0.55,
+        "y": 0.3,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "Parent features",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "Support the student with scoped visibility, clear approval rules and spending limits.",
+        "x": 0.57,
+        "y": 1.52,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 6,
+        "name": "TextBox 5",
+        "text": "07 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 8,
+        "name": "TextBox 7",
+        "text": "TRANSFER REVIEW BOUNDARIES · CNY",
+        "x": 0.8,
+        "y": 2.32,
+        "w": 5.8,
+        "h": 0.28
+      },
+      {
+        "id": 12,
+        "name": "reveal_04",
+        "text": "Family circle",
+        "x": 7.43,
+        "y": 2.11,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 13,
+        "name": "reveal_04",
+        "text": "Invite/link students, review linked finances and revoke relationships.",
+        "x": 7.43,
+        "y": 2.43,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 15,
+        "name": "reveal_05",
+        "text": "Visibility matrix",
+        "x": 7.43,
+        "y": 2.86,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 16,
+        "name": "reveal_05",
+        "text": "Balances, category totals, descriptions, tuition, budgets and permission-aware alerts.",
+        "x": 7.43,
+        "y": 3.18,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 18,
+        "name": "reveal_06",
+        "text": "Approval center",
+        "x": 7.43,
+        "y": 3.61,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 19,
+        "name": "reveal_06",
+        "text": "Approve/reject payments and beneficiaries; reasons/history; tuition/conversion sign-off.",
+        "x": 7.43,
+        "y": 3.93,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 21,
+        "name": "reveal_07",
+        "text": "Spending controls",
+        "x": 7.43,
+        "y": 4.36,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 22,
+        "name": "reveal_07",
+        "text": "Thresholds, transfer/daily/monthly caps, category limits, auto-approval and one-time recipients.",
+        "x": 7.43,
+        "y": 4.68,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 24,
+        "name": "reveal_08",
+        "text": "Parent money & AI",
+        "x": 7.43,
+        "y": 5.11,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 25,
+        "name": "reveal_08",
+        "text": "Own wallets, student funding, deposits/payments, transactions/CSV and reviewed AI actions.",
+        "x": 7.43,
+        "y": 5.43,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 27,
+        "name": "reveal_09",
+        "text": "Shared account tools",
+        "x": 7.43,
+        "y": 5.86,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 28,
+        "name": "reveal_09",
+        "text": "Plans, cards/models, alerts/reports, profile/security, preferences, export and closure.",
+        "x": 7.43,
+        "y": 6.18,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 29,
+        "name": "TextBox 28",
+        "text": "Parent policies can tighten platform limits.",
+        "x": 7.43,
+        "y": 6.78,
+        "w": 5.13,
+        "h": 0.23
+      }
+    ]
+  },
+  {
+    "slide": 9,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "FEATURES / ADMIN & MODERATOR",
+        "x": 0.55,
+        "y": 0.3,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "Admin features",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "Configure the sandbox, resolve requests and inspect the evidence behind each financial action.",
+        "x": 0.57,
+        "y": 1.52,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 6,
+        "name": "TextBox 5",
+        "text": "08 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 9,
+        "name": "TextBox 8",
+        "text": "EXAMPLE QUEUE SNAPSHOT",
+        "x": 0.8,
+        "y": 5.16,
+        "w": 5.8,
+        "h": 0.26
+      },
+      {
+        "id": 12,
+        "name": "reveal_04",
+        "text": "Users & roles",
+        "x": 7.43,
+        "y": 2.11,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 13,
+        "name": "reveal_04",
+        "text": "User/role management, suspend/reactivate, metrics and delegated moderator scopes.",
+        "x": 7.43,
+        "y": 2.43,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 15,
+        "name": "reveal_05",
+        "text": "Manual settlement",
+        "x": 7.43,
+        "y": 2.86,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 16,
+        "name": "reveal_05",
+        "text": "Claim/process/complete/fail, payout references, held funds/refunds and receiving details.",
+        "x": 7.43,
+        "y": 3.18,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 18,
+        "name": "reveal_06",
+        "text": "Financial configuration",
+        "x": 7.43,
+        "y": 3.61,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 19,
+        "name": "reveal_06",
+        "text": "Risk/frequency ceilings, FX, providers/fees/spreads/routes and credit guidance.",
+        "x": 7.43,
+        "y": 3.93,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 21,
+        "name": "reveal_07",
+        "text": "Catalog & subscriptions",
+        "x": 7.43,
+        "y": 4.36,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 22,
+        "name": "reveal_07",
+        "text": "Countries/currencies, defaults/settings, pricing, quotas and feature limits.",
+        "x": 7.43,
+        "y": 4.68,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 24,
+        "name": "reveal_08",
+        "text": "AI & platform team",
+        "x": 7.43,
+        "y": 5.11,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 25,
+        "name": "reveal_08",
+        "text": "Shared models/keys, connection tests, run/tool inspection and published team profiles.",
+        "x": 7.43,
+        "y": 5.43,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 27,
+        "name": "reveal_09",
+        "text": "Reports & evidence",
+        "x": 7.43,
+        "y": 5.86,
+        "w": 5.27,
+        "h": 0.28
+      },
+      {
+        "id": 28,
+        "name": "reveal_09",
+        "text": "Resolve reports; audit logs, transfer receipts, project and security evidence exports.",
+        "x": 7.43,
+        "y": 6.18,
+        "w": 5.27,
+        "h": 0.46
+      },
+      {
+        "id": 29,
+        "name": "TextBox 28",
+        "text": "Moderator access is limited to assigned sections.",
+        "x": 7.43,
+        "y": 6.78,
+        "w": 5.13,
+        "h": 0.23
+      }
+    ]
+  },
+  {
+    "slide": 10,
+    "texts": [
+      {
+        "id": 2,
+        "name": "TextBox 1",
+        "text": "SECURITY & PRIVACY",
+        "x": 0.55,
+        "y": 0.3,
+        "w": 11.0,
+        "h": 0.25
+      },
+      {
+        "id": 3,
+        "name": "reveal_01",
+        "text": "Security & privacy",
+        "x": 0.55,
+        "y": 0.84,
+        "w": 12.2,
+        "h": 0.67
+      },
+      {
+        "id": 4,
+        "name": "TextBox 3",
+        "text": "Controls are applied to each action and each field of financial context.",
+        "x": 0.57,
+        "y": 1.52,
+        "w": 12.0,
+        "h": 0.45
+      },
+      {
+        "id": 5,
+        "name": "TextBox 4",
+        "text": "FINBRIDGE AI",
+        "x": 0.55,
+        "y": 7.12,
+        "w": 4.0,
+        "h": 0.2
+      },
+      {
+        "id": 6,
+        "name": "TextBox 5",
+        "text": "09 / 10",
+        "x": 11.6,
+        "y": 7.08,
+        "w": 1.18,
+        "h": 0.25
+      },
+      {
+        "id": 9,
+        "name": "TextBox 8",
+        "text": "01",
+        "x": 8.11,
+        "y": 2.25,
+        "w": 0.29,
+        "h": 0.23
+      },
+      {
+        "id": 10,
+        "name": "reveal_03",
+        "text": "IDENTITY",
+        "x": 8.66,
+        "y": 2.21,
+        "w": 4.1,
+        "h": 0.3
+      },
+      {
+        "id": 11,
+        "name": "reveal_03",
+        "text": "bcrypt hashes; signed sessions; revocation.",
+        "x": 8.66,
+        "y": 2.64,
+        "w": 4.0,
+        "h": 0.5
+      },
+      {
+        "id": 13,
+        "name": "TextBox 12",
+        "text": "02",
+        "x": 8.11,
+        "y": 3.27,
+        "w": 0.29,
+        "h": 0.23
+      },
+      {
+        "id": 14,
+        "name": "reveal_04",
+        "text": "ACCESS",
+        "x": 8.66,
+        "y": 3.23,
+        "w": 4.1,
+        "h": 0.3
+      },
+      {
+        "id": 15,
+        "name": "reveal_04",
+        "text": "Role + ownership checks; parent permissions.",
+        "x": 8.66,
+        "y": 3.66,
+        "w": 4.0,
+        "h": 0.5
+      },
+      {
+        "id": 17,
+        "name": "TextBox 16",
+        "text": "03",
+        "x": 8.11,
+        "y": 4.29,
+        "w": 0.29,
+        "h": 0.23
+      },
+      {
+        "id": 18,
+        "name": "reveal_05",
+        "text": "AI & SECRETS",
+        "x": 8.66,
+        "y": 4.25,
+        "w": 4.1,
+        "h": 0.3
+      },
+      {
+        "id": 19,
+        "name": "reveal_05",
+        "text": "AES-256-GCM model keys; validated tools.",
+        "x": 8.66,
+        "y": 4.68,
+        "w": 4.0,
+        "h": 0.5
+      },
+      {
+        "id": 21,
+        "name": "TextBox 20",
+        "text": "04",
+        "x": 8.11,
+        "y": 5.32,
+        "w": 0.29,
+        "h": 0.23
+      },
+      {
+        "id": 22,
+        "name": "reveal_06",
+        "text": "MONEY INTEGRITY",
+        "x": 8.66,
+        "y": 5.27,
+        "w": 4.1,
+        "h": 0.3
+      },
+      {
+        "id": 23,
+        "name": "reveal_06",
+        "text": "Confirmation, locks, tokens, balanced ledger.",
+        "x": 8.66,
+        "y": 5.7,
+        "w": 4.0,
+        "h": 0.5
+      },
+      {
+        "id": 25,
+        "name": "TextBox 24",
+        "text": "Data export  ·  Account closure  ·  No stored full PAN/CVV  ·  Selected AI context may reach the configured provider",
+        "x": 0.77,
+        "y": 6.69,
+        "w": 11.8,
+        "h": 0.23
+      }
+    ]
+  }
+]

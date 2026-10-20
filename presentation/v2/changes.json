@@ -1,0 +1,16 @@
+{
+  "source_sha256": "19ce7f1a4fbee42cd5da1d1c7fb26db7a54b81c498f57953fe570303acefd721",
+  "source_slides": 10,
+  "output_slides": 13,
+  "changes": [
+    "Across all slides: removed the small top section labels, slide numbering and redundant bottom brand furniture. Retained main titles and existing content; rebuilt valid animations after layout edits.",
+    "Cover: removed the tagline and generic wallet animation; added a project logo plus a full-width before/after human illustration.",
+    "Developer slide remains slide 2. Removed both avatars and the small demo reminder; restored two large equal cards with the existing names and roles.",
+    "Problem statement: replaced the waterfall/readiness graphic with an illustrated student/family problem and three concrete causes. The later financial scenario stays intact.",
+    "AI implementation: replaced the small raster tool-run panel with an editable, readable question-to-reviewed-plan diagram. Existing right-side tool content stays unchanged.",
+    "Parent, admin and security figures are now large editable action/disclosure diagrams, preserving their existing charts and feature/security wording.",
+    "Added Common features before Security & privacy: three languages, Light/Dark/System appearance, learning pages and the three supported demo roles.",
+    "Added Business model with actual sandbox subscription tiers, qualitative costs and monthly/annual conversion flow.",
+    "Added Business strategy as an explicitly proposed validate/pilot/grow rollout; no invented market, partnership or revenue claims."
+  ]
+}
