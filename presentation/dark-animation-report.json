@@ -1,0 +1,62 @@
+﻿[
+    {
+        "Slide":  1,
+        "Effects":  3,
+        "AnimatedCharts":  0,
+        "Shapes":  3
+    },
+    {
+        "Slide":  2,
+        "Effects":  13,
+        "AnimatedCharts":  1,
+        "Shapes":  39
+    },
+    {
+        "Slide":  3,
+        "Effects":  13,
+        "AnimatedCharts":  1,
+        "Shapes":  21
+    },
+    {
+        "Slide":  4,
+        "Effects":  17,
+        "AnimatedCharts":  1,
+        "Shapes":  32
+    },
+    {
+        "Slide":  5,
+        "Effects":  20,
+        "AnimatedCharts":  0,
+        "Shapes":  33
+    },
+    {
+        "Slide":  6,
+        "Effects":  15,
+        "AnimatedCharts":  1,
+        "Shapes":  31
+    },
+    {
+        "Slide":  7,
+        "Effects":  15,
+        "AnimatedCharts":  1,
+        "Shapes":  28
+    },
+    {
+        "Slide":  8,
+        "Effects":  15,
+        "AnimatedCharts":  1,
+        "Shapes":  28
+    },
+    {
+        "Slide":  9,
+        "Effects":  10,
+        "AnimatedCharts":  0,
+        "Shapes":  24
+    },
+    {
+        "Slide":  10,
+        "Effects":  8,
+        "AnimatedCharts":  0,
+        "Shapes":  12
+    }
+]

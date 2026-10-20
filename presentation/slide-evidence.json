@@ -1,0 +1,52 @@
+[
+  {
+    "slide": 1,
+    "title": "FinBridge AI",
+    "sources": "README.md; public/brand/mark.svg"
+  },
+  {
+    "slide": 2,
+    "title": "Studying abroad makes money hard to coordinate.",
+    "sources": "README.md; src/services/tuition.service.ts; src/services/remittance.service.ts; src/services/parent-controls.service.ts"
+  },
+  {
+    "slide": 3,
+    "title": "One workspace. A shared financial picture.",
+    "sources": "src/actions/dashboard.actions.ts; src/components/layout/shell.tsx; src/actions/preferences.actions.ts; src/services/payment.service.ts; IMPLEMENTATION_STATUS.md"
+  },
+  {
+    "slide": 4,
+    "title": "The AI understands the task\u2014and prepares the next step.",
+    "sources": "src/ai/tools/index.ts; src/ai/action-catalog.ts; src/ai/mock-provider.ts; src/ai/gemini-provider.ts; src/ai/openai-provider.ts"
+  },
+  {
+    "slide": 5,
+    "title": "From language to a validated, auditable action.",
+    "sources": "package.json; database/schema.sql; src/actions/agent-workflow.actions.ts; src/ai/action-service.ts; src/ai/structured-response.ts; src/services/payment.service.ts; tests/"
+  },
+  {
+    "slide": 6,
+    "title": "Features for students",
+    "sources": "src/actions/; src/components/accounts/; src/components/tuition/; src/components/budget/; src/components/payments/; src/components/layout/utility-pages.tsx; src/components/settings/platform-panels.tsx"
+  },
+  {
+    "slide": 7,
+    "title": "Features for parents",
+    "sources": "src/actions/parent.actions.ts; src/services/parent-controls.service.ts; src/services/payment.service.ts; src/ai/action-catalog.ts; src/components/family/family-page.tsx; src/services/automatic-alerts.service.ts"
+  },
+  {
+    "slide": 8,
+    "title": "Features for admins and delegated moderators",
+    "sources": "src/actions/admin.actions.ts; src/actions/platform.actions.ts; src/actions/payment.actions.ts; src/components/admin/; src/lib/admin-permissions.ts; src/components/layout/evidence-page.tsx"
+  },
+  {
+    "slide": 9,
+    "title": "Security & privacy are enforced at the action boundary.",
+    "sources": "src/lib/session.ts; src/lib/auth.ts; src/lib/secrets.ts; src/lib/avatar.ts; src/lib/permissions.ts; src/lib/risk-engine.ts; src/actions/user.actions.ts; src/services/sandbox-payment.service.ts; src/services/payment.service.ts; src/ai/"
+  },
+  {
+    "slide": 10,
+    "title": "Built by a two-person team",
+    "sources": "User instruction: keep developer details demo for manual replacement; README.md project identity"
+  }
+]

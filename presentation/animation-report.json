@@ -1,0 +1,52 @@
+﻿[
+    {
+        "Slide":  1,
+        "Effects":  3,
+        "Shapes":  3
+    },
+    {
+        "Slide":  2,
+        "Effects":  10,
+        "Shapes":  21
+    },
+    {
+        "Slide":  3,
+        "Effects":  9,
+        "Shapes":  18
+    },
+    {
+        "Slide":  4,
+        "Effects":  6,
+        "Shapes":  10
+    },
+    {
+        "Slide":  5,
+        "Effects":  12,
+        "Shapes":  18
+    },
+    {
+        "Slide":  6,
+        "Effects":  22,
+        "Shapes":  27
+    },
+    {
+        "Slide":  7,
+        "Effects":  21,
+        "Shapes":  29
+    },
+    {
+        "Slide":  8,
+        "Effects":  22,
+        "Shapes":  27
+    },
+    {
+        "Slide":  9,
+        "Effects":  10,
+        "Shapes":  23
+    },
+    {
+        "Slide":  10,
+        "Effects":  8,
+        "Shapes":  12
+    }
+]

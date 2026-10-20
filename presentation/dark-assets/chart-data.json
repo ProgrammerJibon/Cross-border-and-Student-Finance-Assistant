@@ -1,0 +1,36 @@
+{
+  "scenario": {
+    "currency": "CNY",
+    "tuition": 40000,
+    "available": 27500,
+    "monthly_income": 5000,
+    "monthly_living": 2125,
+    "months": 2,
+    "projected": 33250,
+    "gap": 6750,
+    "monthly_target": 3375
+  },
+  "quotes_BDT_for_6750_CNY": [
+    [
+      "StudentTransfer",
+      115434.33,
+      430.01
+    ],
+    [
+      "GlobeSend",
+      115796.43,
+      560.94
+    ],
+    [
+      "FastRemit",
+      116328.18,
+      976.76
+    ],
+    [
+      "SwiftBank",
+      118348.24,
+      2296.31
+    ]
+  ],
+  "source": "src/lib/money.ts; src/services/remittance.service.ts; scripts/generate-demo.mjs"
+}

@@ -1,0 +1,1186 @@
+[
+  {
+    "path": "AGENTS.md",
+    "lines": 9,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "eslint.config.mjs",
+    "lines": 14,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "IMPLEMENTATION_STATUS.md",
+    "lines": 36,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "next-env.d.ts",
+    "lines": 7,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "next.config.ts",
+    "lines": 42,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "package.json",
+    "lines": 60,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "playwright.config.ts",
+    "lines": 16,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "postcss.config.mjs",
+    "lines": 2,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "README.md",
+    "lines": 559,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tsconfig.json",
+    "lines": 27,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "database/schema.sql",
+    "lines": 671,
+    "exports": [],
+    "tables": [
+      "users",
+      "user_preferences",
+      "student_profiles",
+      "currencies",
+      "countries",
+      "fx_rates",
+      "accounts",
+      "transaction_categories",
+      "transactions",
+      "budgets",
+      "budget_categories",
+      "tuition_invoices",
+      "tuition_plans",
+      "remittance_providers",
+      "remittance_corridors",
+      "transfer_quotes",
+      "sandbox_transfers",
+      "sandbox_ledger_entries",
+      "financial_goals",
+      "alerts",
+      "notifications",
+      "agent_conversations",
+      "agent_runs",
+      "agent_messages",
+      "agent_tool_calls",
+      "approval_requests",
+      "risk_assessments",
+      "family_links",
+      "parental_controls",
+      "parent_approvals",
+      "plans",
+      "plan_prices",
+      "subscriptions",
+      "usage_counters",
+      "demo_payments",
+      "reports",
+      "audit_logs",
+      "admin_settings",
+      "credit_tasks",
+      "credit_profiles",
+      "auth_attempts",
+      "password_resets",
+      "platform_migrations",
+      "ai_models",
+      "saved_cards",
+      "team_members",
+      "payment_methods",
+      "beneficiaries",
+      "beneficiary_decisions",
+      "financial_requests",
+      "financial_approvals",
+      "financial_events",
+      "financial_ledger_entries",
+      "subscription_events",
+      "agent_action_requests",
+      "agent_conversation_turns",
+      "generated_alerts"
+    ]
+  },
+  {
+    "path": "database/seed.sql",
+    "lines": 546,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "scripts/browser-smoke.mjs",
+    "lines": 33,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "scripts/demo-team.mjs",
+    "lines": 95,
+    "exports": [
+      "seedDemoTeam"
+    ],
+    "tables": []
+  },
+  {
+    "path": "scripts/dictionaries.mjs",
+    "lines": 1194,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "scripts/generate-demo.mjs",
+    "lines": 645,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "scripts/migrate.mjs",
+    "lines": 68,
+    "exports": [
+      "migrate",
+      "seedFxHistory"
+    ],
+    "tables": []
+  },
+  {
+    "path": "scripts/patch-standalone.mjs",
+    "lines": 50,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "scripts/payment-dictionaries.mjs",
+    "lines": 695,
+    "exports": [
+      "paymentEntries"
+    ],
+    "tables": []
+  },
+  {
+    "path": "scripts/payment-migration.mjs",
+    "lines": 64,
+    "exports": [
+      "migratePayments"
+    ],
+    "tables": []
+  },
+  {
+    "path": "scripts/platform-dictionaries.mjs",
+    "lines": 314,
+    "exports": [
+      "platformEntries"
+    ],
+    "tables": []
+  },
+  {
+    "path": "scripts/platform-migration.mjs",
+    "lines": 217,
+    "exports": [
+      "migratePlatform"
+    ],
+    "tables": []
+  },
+  {
+    "path": "scripts/provision-local.mjs",
+    "lines": 34,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "scripts/refine-demo.mjs",
+    "lines": 26,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "scripts/setup.mjs",
+    "lines": 22,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tests/agent-actions.test.ts",
+    "lines": 51,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tests/finance.test.ts",
+    "lines": 167,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tests/payments.integration.ts",
+    "lines": 542,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tests/platform.test.ts",
+    "lines": 59,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tests/providers.test.ts",
+    "lines": 93,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "public/brand/mark.svg",
+    "lines": 1,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/actions/account.actions.ts",
+    "lines": 82,
+    "exports": [
+      "saveAccount",
+      "archiveAccount"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/admin.actions.ts",
+    "lines": 383,
+    "exports": [
+      "manageUser",
+      "savePlan",
+      "resolveReport",
+      "saveProvider",
+      "saveRate",
+      "saveFinancialPolicy",
+      "saveCorridor",
+      "saveCreditGuidance"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/agent-workflow.actions.ts",
+    "lines": 188,
+    "exports": [
+      "confirmAgentAction",
+      "dismissAgentAction",
+      "getAgentActionStatus"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/agent.actions.ts",
+    "lines": 141,
+    "exports": [
+      "askAgent",
+      "getAgentProgress"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/alert.actions.ts",
+    "lines": 41,
+    "exports": [
+      "updateAlert",
+      "readNotifications",
+      "createReminder"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/auth.actions.ts",
+    "lines": 210,
+    "exports": [
+      "login",
+      "register",
+      "logout",
+      "demoLogin",
+      "changePassword",
+      "forgotPassword",
+      "resetPassword"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/budget.actions.ts",
+    "lines": 88,
+    "exports": [
+      "saveBudget",
+      "saveAgentBudget"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/credit.actions.ts",
+    "lines": 41,
+    "exports": [
+      "updateCredit",
+      "toggleCreditTask"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/dashboard.actions.ts",
+    "lines": 458,
+    "exports": [
+      "getDashboardData",
+      "publicPlans",
+      "globalSearch"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/parent.actions.ts",
+    "lines": 255,
+    "exports": [
+      "inviteStudent",
+      "acceptInvitation",
+      "updateFamily",
+      "updateControls",
+      "decideApproval"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/payment.actions.ts",
+    "lines": 165,
+    "exports": [
+      "getPayments",
+      "draftPayment",
+      "confirmPaymentRequest",
+      "cancelPaymentRequest",
+      "parentPaymentDecision",
+      "settlePaymentRequest",
+      "addBeneficiary",
+      "parentBeneficiaryDecision",
+      "removeBeneficiary",
+      "savePaymentMethod",
+      "savePaymentPolicy"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/platform.actions.ts",
+    "lines": 383,
+    "exports": [
+      "saveCurrency",
+      "saveCountry",
+      "saveAiModel",
+      "deleteAiModel",
+      "selectAiModel",
+      "manageSavedCard",
+      "publicTeam",
+      "saveTeamMember",
+      "updateOwnIdentity",
+      "testAiModel"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/preferences.actions.ts",
+    "lines": 56,
+    "exports": [
+      "updatePreferences"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/report.actions.ts",
+    "lines": 42,
+    "exports": [
+      "submitReport"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/subscription.actions.ts",
+    "lines": 150,
+    "exports": [
+      "purchasePlan",
+      "cancelSubscription"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/transaction.actions.ts",
+    "lines": 232,
+    "exports": [
+      "addTransaction",
+      "categorizeTransaction",
+      "importCsv",
+      "listTransactions"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/transfer.actions.ts",
+    "lines": 86,
+    "exports": [
+      "compareTransfers",
+      "prepareTransfer",
+      "approveTransfer",
+      "executeTransfer"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/tuition.actions.ts",
+    "lines": 101,
+    "exports": [
+      "saveTuition",
+      "saveFundingPlan"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/actions/user.actions.ts",
+    "lines": 203,
+    "exports": [
+      "completeOnboarding",
+      "updateProfile",
+      "exportMyData",
+      "closeAccount",
+      "clearDemoData"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/action-catalog.ts",
+    "lines": 336,
+    "exports": [
+      "agentActionCatalog",
+      "responseSchema",
+      "actionProposalSchema",
+      "agentRoutes"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/action-service.ts",
+    "lines": 167,
+    "exports": [
+      "agentCapabilities",
+      "validateAgentResponse",
+      "proposeAgentAction",
+      "agentWorkspaceData"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/gemini-provider.ts",
+    "lines": 125,
+    "exports": [
+      "geminiAgent"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/mock-provider.ts",
+    "lines": 186,
+    "exports": [
+      "mockAgent"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/model-config.ts",
+    "lines": 26,
+    "exports": [
+      "resolveModel"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/openai-provider.ts",
+    "lines": 117,
+    "exports": [
+      "openaiAgent"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/provider-health.ts",
+    "lines": 89,
+    "exports": [
+      "providerError",
+      "testModelConnection",
+      "fetchGemini"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/provider.ts",
+    "lines": 27,
+    "exports": [
+      "activeProvider",
+      "runAgent"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/ai/structured-response.ts",
+    "lines": 50,
+    "exports": [
+      "agentInstructions",
+      "collectAgentOutput",
+      "structuredAgentResult"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/app/globals.css",
+    "lines": 4181,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/app/layout.tsx",
+    "lines": 30,
+    "exports": [
+      "metadata"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/app/not-found.tsx",
+    "lines": 11,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/app/page.tsx",
+    "lines": 8,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/dictionaries/bn-BD.json",
+    "lines": 711,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/dictionaries/en.json",
+    "lines": 711,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/dictionaries/zh-CN.json",
+    "lines": 711,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/lib/admin-permissions.ts",
+    "lines": 31,
+    "exports": [
+      "adminSections",
+      "hasPermission"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/audit.ts",
+    "lines": 28,
+    "exports": [
+      "audit",
+      "notify"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/auth.ts",
+    "lines": 28,
+    "exports": [
+      "currentUser",
+      "requireAdmin",
+      "requireUser"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/avatar.ts",
+    "lines": 18,
+    "exports": [
+      "avatarSchema"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/catalog.ts",
+    "lines": 38,
+    "exports": [
+      "catalog",
+      "validCurrency",
+      "validCountry"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/config.ts",
+    "lines": 15,
+    "exports": [
+      "appConfig",
+      "currencies"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/dates.ts",
+    "lines": 15,
+    "exports": [
+      "formatDate"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/db.ts",
+    "lines": 64,
+    "exports": [
+      "pool",
+      "rows",
+      "write",
+      "atomic"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/env.ts",
+    "lines": 41,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/lib/errors.ts",
+    "lines": 33,
+    "exports": [
+      "AppError",
+      "action",
+      "requireCondition"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/i18n.ts",
+    "lines": 19,
+    "exports": [
+      "normalizeLocale",
+      "dictionaries",
+      "dictionary",
+      "translator"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/json.ts",
+    "lines": 13,
+    "exports": [
+      "parseJson"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/money.ts",
+    "lines": 50,
+    "exports": [
+      "D",
+      "money",
+      "formatMoney",
+      "convert",
+      "fundingGap"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/payment-rules.ts",
+    "lines": 64,
+    "exports": [
+      "paymentMethod",
+      "beneficiarySchema",
+      "requestSchema",
+      "cardSchema",
+      "terminalStatuses",
+      "canSettle"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/permissions.ts",
+    "lines": 36,
+    "exports": [
+      "canOpen"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/plan-limits.ts",
+    "lines": 69,
+    "exports": [
+      "subscriptionActive",
+      "withinLimit",
+      "checkUsageLimit",
+      "incrementUsage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/risk-engine.ts",
+    "lines": 84,
+    "exports": [
+      "assessRisk"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/secrets.ts",
+    "lines": 37,
+    "exports": [
+      "encryptSecret",
+      "decryptSecret"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/session.ts",
+    "lines": 53,
+    "exports": [
+      "createSession",
+      "sessionPayload",
+      "clearSession"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/lib/validation.ts",
+    "lines": 56,
+    "exports": [
+      "id",
+      "currency",
+      "amount",
+      "nonnegative",
+      "shortText",
+      "day",
+      "accountSchema",
+      "transactionSchema",
+      "tuitionSchema",
+      "budgetSchema"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/automatic-alerts.service.ts",
+    "lines": 254,
+    "exports": [
+      "syncAutomaticAlerts"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/currency.service.ts",
+    "lines": 31,
+    "exports": [
+      "getRates",
+      "getRateHistory",
+      "inCurrency"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/financial-config.service.ts",
+    "lines": 54,
+    "exports": [
+      "defaultRiskPolicy",
+      "riskPolicySchema",
+      "getRiskPolicy",
+      "creditKeys",
+      "getCreditGuidance"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/parent-controls.service.ts",
+    "lines": 68,
+    "exports": [
+      "categoryLimitAllows",
+      "checkCategoryLimit"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/payment.service.ts",
+    "lines": 964,
+    "exports": [
+      "paymentActor",
+      "createPaymentDraft",
+      "confirmPayment",
+      "decidePayment",
+      "cancelPayment",
+      "settlePayment",
+      "createBeneficiary",
+      "decideBeneficiary",
+      "paymentWorkspace",
+      "previewPaymentRisk"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/remittance.service.ts",
+    "lines": 70,
+    "exports": [
+      "calculateQuote",
+      "compareQuotes"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/sandbox-payment.service.ts",
+    "lines": 523,
+    "exports": [
+      "prepare",
+      "approve",
+      "execute"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/services/tuition.service.ts",
+    "lines": 75,
+    "exports": [
+      "tuitionGap"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/types/index.ts",
+    "lines": 31,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/types/workspace.ts",
+    "lines": 5,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/ai/tools/index.ts",
+    "lines": 317,
+    "exports": [
+      "toolSchemas",
+      "runTool"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/app/[locale]/error.tsx",
+    "lines": 14,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/app/[locale]/layout.tsx",
+    "lines": 46,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/app/[locale]/loading.tsx",
+    "lines": 13,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "src/app/[locale]/[[...path]]/page.tsx",
+    "lines": 181,
+    "exports": [
+      "dynamic"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/accounts/money-page.tsx",
+    "lines": 137,
+    "exports": [
+      "currencyOptions",
+      "categoryOptions",
+      "MoneyPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/accounts/transactions-page.tsx",
+    "lines": 403,
+    "exports": [
+      "TransactionsPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/admin/admin-page.tsx",
+    "lines": 551,
+    "exports": [
+      "AdminPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/admin/financial-config.tsx",
+    "lines": 234,
+    "exports": [
+      "FinancialConfig"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/agent/action-review.tsx",
+    "lines": 137,
+    "exports": [
+      "AgentActionReview"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/agent/agent-page.tsx",
+    "lines": 537,
+    "exports": [
+      "AgentPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/billing/subscription-page.tsx",
+    "lines": 307,
+    "exports": [
+      "Plans",
+      "SubscriptionPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/budget/budget-page.tsx",
+    "lines": 189,
+    "exports": [
+      "BudgetPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/charts/finance-charts.tsx",
+    "lines": 151,
+    "exports": [
+      "FinanceLine",
+      "FinanceBar",
+      "FinanceDonut",
+      "FinanceGauge"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/charts/journey-visual.tsx",
+    "lines": 125,
+    "exports": [
+      "JourneyVisual",
+      "SecurityVisual"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/dashboard/overview.tsx",
+    "lines": 441,
+    "exports": [
+      "TransactionList",
+      "Overview"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/family/family-page.tsx",
+    "lines": 443,
+    "exports": [
+      "FamilyPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/forms/auth-pages.tsx",
+    "lines": 400,
+    "exports": [
+      "AuthPage",
+      "OnboardingPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/layout/evidence-page.tsx",
+    "lines": 154,
+    "exports": [
+      "EvidencePage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/layout/public-pages.tsx",
+    "lines": 338,
+    "exports": [
+      "PublicPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/layout/public-stories.tsx",
+    "lines": 166,
+    "exports": [
+      "HomePlanningPreview",
+      "PaymentPaths",
+      "SecurityDataMap"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/layout/shell.tsx",
+    "lines": 556,
+    "exports": [
+      "ThemeToggle",
+      "Brand",
+      "LanguageSwitch",
+      "Shell"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/layout/utility-pages.tsx",
+    "lines": 690,
+    "exports": [
+      "WalletPage",
+      "CreditPage",
+      "AlertsPage",
+      "ActivityPage",
+      "ReportsPage",
+      "SettingsPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/layout/workspace-frame.tsx",
+    "lines": 39,
+    "exports": [
+      "WorkspaceFrame"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/payments/payments-panel.tsx",
+    "lines": 882,
+    "exports": [
+      "PaymentsPanel"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/settings/platform-panels.tsx",
+    "lines": 515,
+    "exports": [
+      "ModelManager",
+      "SavedCards",
+      "IdentitySettings",
+      "CatalogAdmin",
+      "TeamAdmin"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/transfers/transfer-page.tsx",
+    "lines": 452,
+    "exports": [
+      "TransferPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/tuition/tuition-page.tsx",
+    "lines": 240,
+    "exports": [
+      "TuitionPage"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/ui/primitives.tsx",
+    "lines": 364,
+    "exports": [
+      "Card",
+      "Badge",
+      "Status",
+      "Empty",
+      "Progress",
+      "Heading",
+      "SectionTitle",
+      "Metric",
+      "FormFields",
+      "FormDialog",
+      "Modal",
+      "DataCards",
+      "downloadJson",
+      "ExportButton"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/ui/profile-photo.tsx",
+    "lines": 50,
+    "exports": [
+      "ProfilePhoto"
+    ],
+    "tables": []
+  },
+  {
+    "path": "src/components/ui/providers.tsx",
+    "lines": 167,
+    "exports": [
+      "useApp",
+      "Providers"
+    ],
+    "tables": []
+  },
+  {
+    "path": "tests/e2e/application.spec.ts",
+    "lines": 416,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tests/e2e/payments.spec.ts",
+    "lines": 337,
+    "exports": [],
+    "tables": []
+  },
+  {
+    "path": "tests/e2e/platform.spec.ts",
+    "lines": 487,
+    "exports": [],
+    "tables": []
+  }
+]
