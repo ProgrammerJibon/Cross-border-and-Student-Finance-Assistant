@@ -195,7 +195,7 @@ export function Shell({
             "transfer",
           ],
           ["tuition", "budget", "credit", "alerts", "activity"],
-          ["family", "subscription", "settings"],
+          ["family", "subscription", "api-keys", "settings"],
         ]
       : user.role === "PARENT"
         ? [
@@ -214,7 +214,7 @@ export function Shell({
               "activity",
               "alerts",
             ],
-            ["subscription", "settings"],
+            ["subscription", "api-keys", "settings"],
           ]
         : [
             [
@@ -225,6 +225,7 @@ export function Shell({
               "admin/reports",
             ],
             [
+              ...(user.role === "ADMIN" ? ["agent"] : []),
               "admin/risk",
               "admin/agent",
               "admin/finance",
@@ -235,7 +236,7 @@ export function Shell({
               "admin/team",
               "admin/audit",
             ],
-            ["project-evidence", "security-assessment", "settings"],
+            ["project-evidence", "security-assessment", "api-keys", "settings"],
           ];
   const nav = (route: string) => {
     if (

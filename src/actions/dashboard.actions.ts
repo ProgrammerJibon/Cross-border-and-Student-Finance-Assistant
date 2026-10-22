@@ -20,7 +20,7 @@ import { hasPermission } from "@/lib/admin-permissions";
 import { canOpen } from "@/lib/permissions";
 import { translator } from "@/lib/i18n";
 import { parseJson } from "@/lib/json";
-export async function getDashboardData() {
+export async function getDashboardData(scope?: "agent") {
   return action(async () => {
     const user = await requireUser();
     const student = user.role === "STUDENT",
@@ -193,7 +193,7 @@ export async function getDashboardData() {
       budgets: Row[];
       transactions: Row[];
     }[] = [];
-    if (user.role === "PARENT")
+    if (user.role === "PARENT" && scope !== "agent")
       for (const f of family.filter((f) => f.status === "LINKED")) {
         const v = parseJson<Record<string, boolean>>(f.visibility, {});
         parentStudents.push({
@@ -237,7 +237,7 @@ export async function getDashboardData() {
           )
         : [];
     const adminData: Record<string, Row[]> = {};
-    if (admin) {
+    if (admin && scope !== "agent") {
       const queries: Record<string, string> = {
         users:
           "SELECT u.id,u.name,u.email,u.role,u.status,u.created_at,s.plan_id FROM users u LEFT JOIN subscriptions s ON s.user_id=u.id ORDER BY u.created_at DESC LIMIT 200",
@@ -286,10 +286,23 @@ export async function getDashboardData() {
         }),
       );
     }
-    const aiModels = await rows(
-      "SELECT id,owner_id,company,label,model,key_last_four,active FROM ai_models WHERE owner_id=? OR (owner_id IS NULL AND (active=1 OR ?=1)) ORDER BY owner_id,label",
-      [user.id, hasPermission(user, "models")],
-    );
+    let aiModels: import("@/types").Row[] = [];
+    try {
+      aiModels = await rows(
+        "SELECT id,owner_id,company,label,model,CASE WHEN owner_id=? THEN key_last_four ELSE NULL END key_last_four,active,base_url,input_price,output_price FROM ai_models WHERE owner_id=? OR (owner_id IS NULL AND (active=1 OR ?=1)) ORDER BY owner_id,label",
+        [user.id, user.id, hasPermission(user, "models")],
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("base_url")) {
+        aiModels = await rows(
+          "SELECT id,owner_id,company,label,model,CASE WHEN owner_id=? THEN key_last_four ELSE NULL END key_last_four,active,NULL AS base_url,NULL AS input_price,NULL AS output_price FROM ai_models WHERE owner_id=? OR (owner_id IS NULL AND (active=1 OR ?=1)) ORDER BY owner_id,label",
+          [user.id, user.id, hasPermission(user, "models")],
+        );
+      } else {
+        throw err;
+      }
+    }
     const savedCards = await rows(
       "SELECT id,label,last_four,expiry FROM saved_cards WHERE user_id=? ORDER BY created_at DESC",
       [user.id],

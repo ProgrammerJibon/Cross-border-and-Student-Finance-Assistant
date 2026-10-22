@@ -5,6 +5,8 @@ export function canOpen(
   path: string,
   admin_permissions: string | null = null,
 ) {
+  if (path === "agent") return ["STUDENT", "PARENT", "ADMIN"].includes(role);
+  if (path === "api-keys") return true;
   if (
     ["payments", "beneficiaries", "money", "transactions", "agent"].includes(
       path,

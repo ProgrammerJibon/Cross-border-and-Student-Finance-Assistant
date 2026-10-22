@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AgentActionReview, type ProposedAction } from "./action-review";
 import Link from "next/link";
@@ -11,7 +11,14 @@ import {
   FiShield,
   FiCircle,
 } from "react-icons/fi";
-import { askAgent, getAgentProgress } from "@/actions/agent.actions";
+import {
+  askAgent,
+  getAgentHistory,
+  getAgentConversation,
+} from "@/actions/agent.actions";
+import type { SavedTurn } from "@/ai/conversation";
+import { AgentUsagePanel } from "./usage-panel";
+import { parseJson } from "@/lib/json";
 import { PaymentsPanel } from "@/components/payments/payments-panel";
 import { saveAgentBudget } from "@/actions/budget.actions";
 import { selectAiModel } from "@/actions/platform.actions";
@@ -26,10 +33,16 @@ import {
 } from "@/components/ui/primitives";
 import { formatMoney } from "@/lib/money";
 import type { Workspace } from "@/types/workspace";
-type AgentResult = Extract<
-  Awaited<ReturnType<typeof askAgent>>,
-  { success: true }
->["data"];
+type AgentResult = {
+  id: string;
+  kind: string;
+  summary?: string;
+  summaryKey: string;
+  outputs: Record<string, unknown>;
+  steps: string[];
+  amount: string;
+  toolCalls?: { name: string; status: string }[];
+};
 export function AgentPage({ data }: { data: Workspace }) {
   const { t, locale, run } = useApp();
   const router = useRouter();
@@ -38,16 +51,79 @@ export function AgentPage({ data }: { data: Workspace }) {
     { name: string; status: string }[]
   >([]);
   const [conversations, setConversations] = useState(data.runs);
+  const [thread, setThread] = useState<SavedTurn[]>([]);
+  const [selectedRunId, setSelectedRunId] = useState("");
+  const [historyPage, setHistoryPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [historyBusy, setHistoryBusy] = useState(false);
+  const submitting = useRef(false);
   const [input, setInput] = useState("");
   const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [budgetReview, setBudgetReview] = useState(false);
   const [model, setModel] = useState(data.user.ai_model_id || "mock");
+  const [modelBusy, setModelBusy] = useState(false);
   const [result, setResult] = useState<AgentResult | null>(null);
+  const storageKey = `finbridge-agent-${data.user.id}`;
+  const loadThread = useCallback(
+    async (id: string) => {
+      const saved = await getAgentConversation(id);
+      if (!saved.success) {
+        setError(saved.code);
+        return;
+      }
+      setThread(saved.data);
+      const last = saved.data.at(-1)!;
+      setSelectedRunId(last.id);
+      localStorage.setItem(storageKey, last.id);
+      setGoal(last.goal);
+      if (last.result) {
+        const parsed = parseJson<Partial<AgentResult> & { error?: string }>(
+          last.result,
+          {},
+        );
+        setResult({
+          kind: "action",
+          summaryKey: "",
+          amount: "0",
+          ...parsed,
+          id: last.id,
+          outputs: parsed.outputs || {},
+          steps: parsed.steps || [],
+        });
+        setError(parsed.error || "");
+      } else {
+        setResult(null);
+        setError(
+          last.status === "RUNNING" ? "AI_RUN_IN_PROGRESS" : "AI_INTERRUPTED",
+        );
+      }
+    },
+    [storageKey],
+  );
+  useEffect(() => {
+    let live = true;
+    void getAgentHistory()
+      .then(async (r) => {
+        if (!live || !r.success) return;
+        setConversations(r.data.runs);
+        setHasMore(r.data.hasMore);
+        const id = localStorage.getItem(storageKey);
+        if (id) await loadThread(id);
+      })
+      .catch(() => {
+        if (live) setError("AI_UNAVAILABLE");
+      });
+    return () => {
+      live = false;
+    };
+  }, [loadThread, storageKey]);
   const submit = async (prompt: string) => {
-    if (!prompt.trim() || busy) return;
-    const previousRunId = result?.id;
+    if (!prompt.trim() || submitting.current || historyBusy || modelBusy)
+      return;
+    submitting.current = true;
+    const previousRunId = selectedRunId || undefined;
     const requestId = crypto.randomUUID();
     setRunningId(requestId);
     setLiveSteps([]);
@@ -59,6 +135,10 @@ export function AgentPage({ data }: { data: Workspace }) {
       const r = await askAgent(prompt, model, previousRunId, requestId);
       if (r.success) {
         setResult(r.data);
+        setSelectedRunId(r.data.id);
+        localStorage.setItem(storageKey, r.data.id);
+        const saved = await getAgentConversation(r.data.id);
+        if (saved.success) setThread(saved.data);
         setInput("");
         setConversations((c) => [
           {
@@ -76,25 +156,63 @@ export function AgentPage({ data }: { data: Workspace }) {
         if (navigation?.type === "open_page" && navigation.url)
           router.push(`/${locale}/${navigation.url}`);
       } else {
+        const saved = await getAgentConversation(requestId);
+        if (saved.success) {
+          setThread(saved.data);
+          setSelectedRunId(requestId);
+          localStorage.setItem(storageKey, requestId);
+          const last = saved.data.at(-1)!;
+          const partial = parseJson<Partial<AgentResult>>(last.result, {});
+          setResult({
+            id: last.id,
+            kind: "action",
+            summaryKey: "",
+            amount: "0",
+            ...partial,
+            outputs: partial.outputs || {},
+            steps: partial.steps || [],
+          });
+          setConversations((c) => [{ ...last }, ...c]);
+        }
         setError(r.code);
         setInput(prompt);
       }
     } catch {
+      // A lost HTTP response may still have completed server-side. Preserve its
+      // identifier so refresh/reopen can recover it without repeating mutations.
+      localStorage.setItem(storageKey, requestId);
       setError("AI_UNAVAILABLE");
       setInput(prompt);
     }
+    submitting.current = false;
     setBusy(false);
   };
   useEffect(() => {
     if (!busy || !runningId) return;
     const poll = async () => {
-      const r = await getAgentProgress(runningId);
-      if (r.success) setLiveSteps(r.data);
+      try {
+        const r = await fetch(
+          `/api/agent/progress?runId=${encodeURIComponent(runningId)}`,
+          { cache: "no-store" },
+        );
+        if (r.ok) setLiveSteps((await r.json()).steps);
+      } catch {
+        /* Keep the conversation; a transient progress failure is harmless. */
+      }
     };
     const timer = setInterval(() => void poll(), 1500);
     return () => clearInterval(timer);
   }, [busy, runningId]);
   const outputs = result?.outputs || {};
+  const timeline = busy
+    ? liveSteps
+    : result?.toolCalls ||
+      (result?.steps || []).map((name) => ({
+        name,
+        status: (outputs[name] as { failed?: boolean })?.failed
+          ? "FAILED"
+          : "SUCCESS",
+      }));
   const response = outputs.respond as
     | {
         type: string;
@@ -157,14 +275,21 @@ export function AgentPage({ data }: { data: Workspace }) {
             <select
               aria-label={t("selectedModel")}
               value={model}
-              disabled={busy}
+              disabled={busy || modelBusy}
               onChange={async (e) => {
                 const id = e.target.value;
-                const result = await run(() => selectAiModel(id), {
-                  quiet: true,
-                  refresh: false,
-                });
-                if (result !== undefined) setModel(id);
+                const previous = model;
+                setModel(id);
+                setModelBusy(true);
+                try {
+                  const result = await run(() => selectAiModel(id), {
+                    quiet: true,
+                    refresh: false,
+                  });
+                  if (result === undefined) setModel(previous);
+                } finally {
+                  setModelBusy(false);
+                }
               }}
             >
               <option value="mock">{t("mockMode")}</option>
@@ -178,47 +303,112 @@ export function AgentPage({ data }: { data: Workspace }) {
             </select>
           </div>
           <div className="agent-content">
+            <p className="muted">
+              {t("agentKeysHelp")}{" "}
+              <Link className="text-link" href={`/${locale}/api-keys`}>
+                {t("api-keys")}
+              </Link>
+            </p>
+            {model === "mock" && <p className="muted">{t("agentDemoHelp")}</p>}
             <label className="model-select">
               {t("previousConversations")}
               <select
                 aria-label={t("previousConversations")}
-                value={result?.id || ""}
-                disabled={busy}
-                onChange={(e) => {
-                  const saved = conversations.find(
-                    (r) => r.id === e.target.value,
-                  );
+                value={selectedRunId}
+                disabled={busy || historyBusy}
+                onChange={async (e) => {
+                  const id = e.target.value;
                   if (!e.target.value) {
+                    setSelectedRunId("");
+                    setThread([]);
+                    localStorage.removeItem(storageKey);
                     setResult(null);
                     setGoal("");
                     setInput("");
                     setError("");
                     return;
                   }
-                  if (saved?.result) {
-                    try {
-                      setResult({
-                        ...JSON.parse(String(saved.result)),
-                        id: saved.id,
-                      });
-                      setGoal(String(saved.goal));
-                      setError("");
-                    } catch {
-                      setError("AI_UNAVAILABLE");
-                    }
+                  setHistoryBusy(true);
+                  try {
+                    await loadThread(id);
+                  } catch {
+                    setError("AI_UNAVAILABLE");
+                  } finally {
+                    setHistoryBusy(false);
                   }
                 }}
               >
                 <option value="">{t("newConversation")}</option>
-                {conversations
-                  .filter((r) => r.status === "COMPLETED" && r.result)
-                  .map((r) => (
-                    <option value={String(r.id)} key={String(r.id)}>
-                      {String(r.goal).slice(0, 75)}
-                    </option>
-                  ))}
+                {conversations.map((r) => (
+                  <option value={String(r.id)} key={String(r.id)}>
+                    {String(r.goal).slice(0, 75)} · {t(String(r.status))}
+                  </option>
+                ))}
               </select>
             </label>
+            {hasMore && (
+              <button
+                className="text-link"
+                disabled={busy || historyBusy}
+                onClick={async () => {
+                  setHistoryBusy(true);
+                  try {
+                    const r = await getAgentHistory(historyPage + 1);
+                    if (r.success) {
+                      setConversations((c) => [
+                        ...c,
+                        ...r.data.runs.filter(
+                          (row) =>
+                            !c.some((existing) => existing.id === row.id),
+                        ),
+                      ]);
+                      setHistoryPage((p) => p + 1);
+                      setHasMore(r.data.hasMore);
+                    } else setError(r.code);
+                  } finally {
+                    setHistoryBusy(false);
+                  }
+                }}
+              >
+                {t("loadOlderConversations")}
+              </button>
+            )}
+            <div aria-label={t("conversationHistory")}>
+              {thread
+                .filter((turn) => busy || turn.id !== selectedRunId)
+                .map((turn) => {
+                  const prior = parseJson<{
+                    summary?: string;
+                    summaryKey?: string;
+                    error?: string;
+                    outputs?: { proposedActions?: ProposedAction[] };
+                  }>(turn.result, {});
+                  return (
+                    <div key={turn.id}>
+                      <div className="user-message">{turn.goal}</div>
+                      <div className="agent-message">
+                        <span className="agent-avatar">
+                          <FiZap />
+                        </span>
+                        <div className="agent-response">
+                          <p className="prewrap">
+                            {prior.summary ||
+                              t(prior.summaryKey || prior.error || turn.status)}
+                          </p>
+                          {prior.outputs?.proposedActions?.map((proposal) => (
+                            <AgentActionReview
+                              key={proposal.id}
+                              proposal={proposal}
+                              onComplete={() => void loadThread(selectedRunId)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+            {error && <p role="alert">{t(error)}</p>}
             {!goal ? (
               <div className="agent-welcome">
                 <span className="agent-large-icon">
@@ -269,9 +459,9 @@ export function AgentPage({ data }: { data: Workspace }) {
                     ) : result ? (
                       <>
                         <p className="prewrap">
-                          {"summary" in result
+                          {"summary" in result && result.summary
                             ? result.summary
-                            : t(result.summaryKey)}
+                            : t(result.summaryKey || "")}
                         </p>
                         {response?.type === "require_answer" && (
                           <div className="agent-question">
@@ -309,6 +499,7 @@ export function AgentPage({ data }: { data: Workspace }) {
                                 p.input.language
                               )
                                 router.push(`/${p.input.language}/agent`);
+                              else void loadThread(selectedRunId);
                             }}
                           />
                         ))}
@@ -394,7 +585,7 @@ export function AgentPage({ data }: { data: Workspace }) {
                         </div>
                       </>
                     ) : (
-                      <p role="alert">{t(error || "retry")}</p>
+                      !error && <p>{t("retry")}</p>
                     )}
                   </div>
                 </div>
@@ -424,7 +615,9 @@ export function AgentPage({ data }: { data: Workspace }) {
             />
             <button
               aria-label={t("send")}
-              disabled={busy || input.trim().length < 3}
+              disabled={
+                busy || historyBusy || modelBusy || input.trim().length < 1
+              }
             >
               <FiArrowUp />
             </button>
@@ -435,6 +628,7 @@ export function AgentPage({ data }: { data: Workspace }) {
           </div>
         </Card>
         <div className="agent-context">
+          <AgentUsagePanel revision={`${selectedRunId}-${busy}`} />
           <Card>
             <h3>{t("context")}</h3>
             <div className="detail-list">
@@ -462,35 +656,18 @@ export function AgentPage({ data }: { data: Workspace }) {
           <Card>
             <h3>{t("executionTimeline")}</h3>
             <div className="timeline">
-              {(
-                (busy ? liveSteps.map((s) => s.name) : result?.steps) || [
-                  "getStudentProfile",
-                  "getAccounts",
-                  "calculateTuitionGap",
-                  "getFxRates",
-                  "compareRemittance",
-                  "analyseFinancialHealth",
-                ]
-              ).map((s, i) => (
+              {timeline.map((s, i) => (
                 <div
-                  className={`timeline-step ${result || (busy && liveSteps[i]?.status === "SUCCESS") ? "done" : ""}`}
-                  key={`${s}-${i}`}
+                  className={`timeline-step ${s.status === "SUCCESS" ? "done" : ""}`}
+                  key={`${s.name}-${i}`}
                 >
                   <span>
-                    {result || (busy && liveSteps[i]?.status === "SUCCESS") ? (
-                      <FiCheck />
-                    ) : (
-                      <FiCircle />
-                    )}
+                    {s.status === "SUCCESS" ? <FiCheck /> : <FiCircle />}
                   </span>
                   <div>
-                    <strong>{t(s)}</strong>
+                    <strong>{t(s.name)}</strong>
                     <small>
-                      {result
-                        ? t("COMPLETED")
-                        : busy
-                          ? t("PENDING")
-                          : t("DRAFT")}
+                      {t(s.status === "SUCCESS" ? "COMPLETED" : s.status)}
                     </small>
                   </div>
                 </div>

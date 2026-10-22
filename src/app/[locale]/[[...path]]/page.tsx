@@ -84,6 +84,7 @@ export default async function Page({
     "budget",
     "credit",
     "agent",
+    "api-keys",
     "alerts",
     "activity",
     "family",
@@ -112,7 +113,7 @@ export default async function Page({
     "admin/team",
   ];
   if (!allowed.includes(path)) notFound();
-  const result = await getDashboardData();
+  const result = await getDashboardData(path === "agent" ? "agent" : undefined);
   if (!result.success) {
     const t = translator(locale);
     return (
@@ -133,6 +134,8 @@ export default async function Page({
     <PaymentsPanel data={data} mode={path.split("/").at(-1)} />
   ) : path === "admin/catalog" ? (
     <CatalogAdmin data={data} />
+  ) : path === "api-keys" ? (
+    <ModelManager data={data} />
   ) : path === "admin/models" ? (
     <ModelManager data={data} shared />
   ) : path === "admin/team" ? (

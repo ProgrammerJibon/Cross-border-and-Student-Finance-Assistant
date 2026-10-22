@@ -1,4 +1,8 @@
-import { responseSchema, actionProposalSchema } from "../action-catalog";
+import {
+  responseSchema,
+  actionProposalSchema,
+  agentActionCatalog,
+} from "../action-catalog";
 import {
   agentCapabilities,
   validateAgentResponse,
@@ -18,11 +22,13 @@ import { D, money } from "@/lib/money";
 import { requestSchema, beneficiarySchema } from "@/lib/payment-rules";
 import {
   createPaymentDraft,
-  createBeneficiary,
   paymentWorkspace,
   paymentActor,
   previewPaymentRisk,
 } from "@/services/payment.service";
+import { canUseAgentTool } from "../tool-policy";
+import type { Role } from "@/types";
+import { getRiskPolicy } from "@/services/financial-config.service";
 const empty = z.object({}).strict();
 const comparison = z
   .object({
@@ -35,6 +41,28 @@ const comparison = z
   })
   .strict();
 export const toolSchemas = {
+  calculate: z
+    .object({
+      operation: z.enum(["add", "subtract", "multiply", "divide"]),
+      left: z.string().regex(/^-?\d{1,15}(\.\d{1,8})?$/),
+      right: z.string().regex(/^-?\d{1,15}(\.\d{1,8})?$/),
+    })
+    .strict(),
+  getActivity: empty,
+  getApprovals: empty,
+  getTransfers: empty,
+  getSettlementQueue: empty,
+  getAdminConfiguration: z
+    .object({
+      topic: z.enum(["finance", "catalog", "plans", "paymentMethods"]),
+    })
+    .strict(),
+  searchTransactions: z
+    .object({
+      search: z.string().max(160),
+      page: z.number().int().min(0).max(10000),
+    })
+    .strict(),
   getActionCapabilities: empty,
   getWorkspaceData: z
     .object({
@@ -84,7 +112,7 @@ export async function runTool(
   input: unknown,
 ) {
   const actor = await paymentActor(userId);
-  requireCondition(["STUDENT", "PARENT"].includes(actor.role));
+  requireCondition(canUseAgentTool(actor.role as Role, name), "FORBIDDEN");
   requireCondition(
     (
       await rows(
@@ -113,6 +141,100 @@ export async function runTool(
   let output: unknown;
   try {
     switch (name) {
+      case "calculate": {
+        const v = toolSchemas.calculate.parse(args);
+        requireCondition(
+          v.operation !== "divide" || !D(v.right).isZero(),
+          "VALIDATION_ERROR",
+        );
+        output = {
+          ...v,
+          result: (v.operation === "add"
+            ? D(v.left).plus(v.right)
+            : v.operation === "subtract"
+              ? D(v.left).minus(v.right)
+              : v.operation === "multiply"
+                ? D(v.left).mul(v.right)
+                : D(v.left).div(v.right)
+          ).toString(),
+        };
+        break;
+      }
+      case "searchTransactions": {
+        const v = toolSchemas.searchTransactions.parse(args);
+        const data = await rows(
+          "SELECT id,account_id,description,amount,currency,category,type,date FROM transactions WHERE user_id=? AND description LIKE ? ORDER BY date DESC,id DESC LIMIT 51 OFFSET " +
+            v.page * 50,
+          [userId, `%${v.search}%`],
+        );
+        output = {
+          rows: data.slice(0, 50),
+          hasMore: data.length > 50,
+          page: v.page,
+        };
+        break;
+      }
+      case "getActivity":
+        output = await rows(
+          "SELECT action,entity_type,entity_id,created_at FROM audit_logs WHERE actor_id=? ORDER BY created_at DESC LIMIT 100",
+          [userId],
+        );
+        break;
+      case "getTransfers":
+        output = await rows(
+          "SELECT t.id,t.recipient,t.purpose,t.status,q.total,q.source_currency,q.receive_amount,q.target_currency FROM sandbox_transfers t JOIN transfer_quotes q ON q.id=t.quote_id WHERE t.user_id=? ORDER BY t.created_at DESC LIMIT 100",
+          [userId],
+        );
+        break;
+      case "getApprovals":
+        output = await rows(
+          "SELECT p.id,p.status,t.recipient,t.purpose,q.total,q.source_currency,q.receive_amount,q.target_currency FROM parent_approvals p JOIN sandbox_transfers t ON t.id=p.transfer_id JOIN transfer_quotes q ON q.id=t.quote_id WHERE p.parent_id=? AND EXISTS (SELECT 1 FROM family_links f WHERE f.parent_id=p.parent_id AND f.student_id=t.user_id AND f.status='LINKED') ORDER BY p.created_at DESC LIMIT 100",
+          [userId],
+        );
+        break;
+      case "getSettlementQueue":
+        output = (await paymentWorkspace(userId)).requests
+          .filter((r) => ["QUEUED", "PROCESSING"].includes(String(r.status)))
+          .map((r) => ({
+            id: r.id,
+            kind: r.kind,
+            method: r.method,
+            amount: r.amount,
+            currency: r.currency,
+            recipient: r.recipient,
+            destination: r.destination,
+            receive_amount: r.receive_amount,
+            receive_currency: r.receive_currency,
+            status: r.status,
+            reference: r.reference,
+          }));
+        break;
+      case "getAdminConfiguration": {
+        const topic = toolSchemas.getAdminConfiguration.parse(args).topic;
+        if (topic === "finance")
+          output = {
+            risk: await getRiskPolicy(),
+            riskCurrency: "CAD",
+            providers: await rows("SELECT * FROM remittance_providers"),
+            corridors: await rows("SELECT * FROM remittance_corridors"),
+            rates: await getRates(),
+          };
+        if (topic === "catalog")
+          output = {
+            countries: await rows("SELECT * FROM countries"),
+            currencies: await rows("SELECT * FROM currencies"),
+          };
+        if (topic === "plans")
+          output = await rows(
+            "SELECT p.*,r.monthly,r.yearly,r.currency FROM plans p JOIN plan_prices r ON r.plan_id=p.id",
+          );
+        if (topic === "paymentMethods")
+          output = {
+            methods: (await paymentWorkspace(userId)).methods,
+            policy: (await paymentWorkspace(userId)).policy,
+          };
+        break;
+      }
       case "assessPaymentRisk":
         output = await previewPaymentRisk(
           userId,
@@ -145,16 +267,60 @@ export async function runTool(
         break;
       }
       case "getPaymentRequests":
-        output = (await paymentWorkspace(userId)).requests;
+        output = (await paymentWorkspace(userId)).requests.map((r) => ({
+          id: r.id,
+          kind: r.kind,
+          method: r.method,
+          amount: r.amount,
+          currency: r.currency,
+          recipient: r.recipient,
+          receive_amount: r.receive_amount,
+          receive_currency: r.receive_currency,
+          status: r.status,
+          owned: r.user_id === userId,
+          ...(r.user_id === userId
+            ? { account_id: r.account_id, destination: r.destination }
+            : {}),
+        }));
         break;
       case "getBeneficiaries":
-        output = (await paymentWorkspace(userId)).beneficiaries;
+        output = (await paymentWorkspace(userId)).beneficiaries.map((b) => ({
+          id: b.id,
+          name: b.name,
+          method: b.method,
+          currency: b.currency,
+          destination: b.destination,
+          status: b.status,
+          owned: b.user_id === userId,
+        }));
         break;
       case "addBeneficiary":
-        output = await createBeneficiary(userId, args);
+        output = await proposeAgentAction(userId, runId, {
+          action: "addBeneficiary",
+          input_json: JSON.stringify(args),
+        });
         break;
       case "draftPayment":
-        output = await createPaymentDraft(userId, args, `agent-${runId}`);
+        {
+          const draft = await createPaymentDraft(
+            userId,
+            args,
+            `agent-${runId}`,
+          );
+          output = {
+            id: draft.id,
+            kind: draft.kind,
+            method: draft.method,
+            amount: draft.amount,
+            currency: draft.currency,
+            recipient: draft.recipient,
+            destination: draft.destination,
+            receive_amount: draft.receive_amount,
+            receive_currency: draft.receive_currency,
+            status: draft.status,
+            confirmationRequired: true,
+          };
+        }
         break;
       case "getStudentProfile":
         output =
@@ -262,17 +428,10 @@ export async function runTool(
         };
         break;
       case "createAlert": {
-        const [p] = await rows<{ auto_alerts: number }>(
-          "SELECT auto_alerts FROM user_preferences WHERE user_id=?",
-          [userId],
-        );
-        requireCondition(p.auto_alerts, "APPROVAL_REQUIRED");
-        const v = toolSchemas.createAlert.parse(args);
-        await write(
-          "INSERT INTO alerts(id,user_id,type,severity,detail) VALUES (?,?,'AI','INFO',?)",
-          [randomUUID(), userId, v.detail],
-        );
-        output = { created: true };
+        output = await proposeAgentAction(userId, runId, {
+          action: "createReminder",
+          input_json: JSON.stringify(args),
+        });
         break;
       }
       case "executeSandboxTransfer":
@@ -295,6 +454,35 @@ export async function runTool(
     );
     return output;
   } catch (e) {
+    const failure = {
+      code:
+        e instanceof AppError
+          ? e.code
+          : e instanceof z.ZodError
+            ? "VALIDATION_ERROR"
+            : "TOOL_FAILED",
+      failed: true,
+      ...(e instanceof z.ZodError
+        ? {
+            fields: e.issues.map((issue) => ({
+              path: issue.path.join("."),
+              message: issue.message,
+            })),
+            ...(name === "requestAction"
+              ? {
+                  expectedInput: z.toJSONSchema(
+                    agentActionCatalog[actionProposalSchema.parse(args).action]
+                      .schema,
+                  ),
+                }
+              : {}),
+          }
+        : {}),
+      instruction:
+        e instanceof z.ZodError
+          ? "Correct parameters using the expected schema and information already supplied. Monetary amounts must be strings; currency is required. Retry with corrected input, or ask the user only for genuinely missing information. No action was executed."
+          : "Explain this failure. Do not claim success. Ask for missing information or offer the secure form.",
+    };
     await write(
       "INSERT INTO agent_tool_calls(id,run_id,name,input,output,status) VALUES (?,?,?,?,?,'FAILED')",
       [
@@ -302,16 +490,9 @@ export async function runTool(
         runId,
         name,
         JSON.stringify(args),
-        JSON.stringify({
-          code: e instanceof AppError ? e.code : "TOOL_FAILED",
-        }),
+        JSON.stringify(failure),
       ],
     );
-    return {
-      code: e instanceof AppError ? e.code : "TOOL_FAILED",
-      failed: true,
-      instruction:
-        "Explain this failure. Do not claim success. Ask for missing information or offer the payment form.",
-    };
+    return failure;
   }
 }

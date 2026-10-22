@@ -146,9 +146,28 @@ export function ModelManager({
               options: [
                 { value: "OPENAI", label: "OpenAI" },
                 { value: "GEMINI", label: "Google Gemini" },
+                { value: "ANTHROPIC", label: "Anthropic Claude" },
+                { value: "COMPATIBLE", label: "compatibleProvider" },
               ],
             },
             { name: "model", help: "modelNameHelp" },
+            {
+              name: "base_url",
+              label: "providerBaseUrl",
+              required: false,
+              help: "providerBaseUrlHelp",
+            },
+            {
+              name: "input_price",
+              label: "inputTokenPrice",
+              required: false,
+              help: "tokenPriceHelp",
+            },
+            {
+              name: "output_price",
+              label: "outputTokenPrice",
+              required: false,
+            },
             {
               name: "key",
               label: "apiKey",

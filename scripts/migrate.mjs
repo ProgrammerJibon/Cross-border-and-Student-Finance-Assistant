@@ -2,10 +2,12 @@ import mysql from "mysql2/promise";
 import { pathToFileURL } from "node:url";
 import { migratePlatform } from "./platform-migration.mjs";
 import { migratePayments } from "./payment-migration.mjs";
+import { migrateAgent } from "./agent-migration.mjs";
 
 export async function migrate(db) {
   await migratePlatform(db);
   await migratePayments(db);
+  await migrateAgent(db);
   const [columns] = await db.execute(
     "SELECT DATETIME_PRECISION precision_value FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='fx_rates' AND COLUMN_NAME='recorded_at'",
   );

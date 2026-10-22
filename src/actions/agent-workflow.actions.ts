@@ -12,6 +12,24 @@ async function dispatch(
   v: Record<string, unknown>,
 ): Promise<Result<unknown>> {
   switch (name) {
+    case "decideApproval":
+      return (await import("./parent.actions")).decideApproval(v);
+    case "settlePaymentRequest":
+      return (await import("./payment.actions")).settlePaymentRequest(v);
+    case "savePaymentMethod":
+      return (await import("./payment.actions")).savePaymentMethod(v);
+    case "savePaymentPolicy":
+      return (await import("./payment.actions")).savePaymentPolicy(v);
+    case "saveRate":
+    case "saveFinancialPolicy":
+    case "saveCorridor":
+    case "saveProvider":
+    case "savePlan":
+    case "saveCreditGuidance":
+      return (await import("./admin.actions"))[name](v);
+    case "saveCountry":
+    case "saveCurrency":
+      return (await import("./platform.actions"))[name](v);
     case "saveAccount":
       return (await import("./account.actions")).saveAccount(v);
     case "archiveAccount":
@@ -179,7 +197,7 @@ export async function getAgentActionStatus(ids: string[]) {
     z.array(z.string().max(64)).max(20).parse(ids);
     if (!ids.length) return [];
     return rows(
-      "SELECT id,status,result_json FROM agent_action_requests WHERE user_id=? AND id IN (" +
+      "SELECT id,IF(status='PENDING' AND created_at<DATE_SUB(UTC_TIMESTAMP(),INTERVAL 30 MINUTE),'EXPIRED',status) status,result_json FROM agent_action_requests WHERE user_id=? AND id IN (" +
         ids.map(() => "?").join(",") +
         ")",
       [u.id, ...ids],

@@ -126,6 +126,10 @@ export function AgentActionReview({
         </div>
       )}
       {status === "COMPLETED" && <p role="status">{t("actionCompleted")}</p>}
+      {status === "EXECUTING" && (
+        <p role="status">{t("agentActionExecuting")}</p>
+      )}
+      {status === "EXPIRED" && <p role="status">{t("agentActionExpired")}</p>}
       {details != null && (
         <details>
           <summary>{t("result")}</summary>

@@ -280,7 +280,7 @@ CREATE TABLE IF NOT EXISTS agent_messages (
   conversation_id VARCHAR(64),
   run_id VARCHAR(64) NOT NULL,
   role VARCHAR(15) NOT NULL,
-  content TEXT NOT NULL,
+  content MEDIUMTEXT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(run_id) REFERENCES agent_runs(id)
 );
@@ -488,11 +488,14 @@ CREATE TABLE IF NOT EXISTS platform_migrations (
 CREATE TABLE IF NOT EXISTS ai_models (
   id VARCHAR(64) PRIMARY KEY,
   owner_id VARCHAR(64) NULL,
-  company ENUM('OPENAI','GEMINI') NOT NULL,
+  company ENUM('OPENAI','GEMINI','ANTHROPIC','COMPATIBLE') NOT NULL,
   label VARCHAR(100) NOT NULL,
   model VARCHAR(100) NOT NULL,
   key_cipher TEXT NOT NULL,
   key_last_four CHAR(4) NOT NULL,
+  base_url VARCHAR(300) NULL,
+  input_price DECIMAL(16,6) NULL,
+  output_price DECIMAL(16,6) NULL,
   active BOOLEAN NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(owner_id) REFERENCES users(id)
@@ -656,6 +659,25 @@ CREATE TABLE IF NOT EXISTS agent_conversation_turns (
   previous_run_id VARCHAR(64) NOT NULL,
   FOREIGN KEY(run_id) REFERENCES agent_runs(id),
   FOREIGN KEY(previous_run_id) REFERENCES agent_runs(id)
+);
+
+CREATE TABLE IF NOT EXISTS agent_provider_usage (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  run_id VARCHAR(64) NULL,
+  model_id VARCHAR(64) NULL,
+  provider VARCHAR(20) NOT NULL,
+  model VARCHAR(100) NOT NULL,
+  http_status INT NOT NULL,
+  input_tokens BIGINT NULL,
+  output_tokens BIGINT NULL,
+  total_tokens BIGINT NULL,
+  estimated_cost_usd DECIMAL(20,8) NULL,
+  details JSON NOT NULL,
+  created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(run_id) REFERENCES agent_runs(id),
+  INDEX(user_id,created_at)
 );
 
 CREATE TABLE IF NOT EXISTS generated_alerts (

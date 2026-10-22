@@ -14,10 +14,28 @@ import {
   responseSchema,
 } from "./action-catalog";
 import type { Role } from "@/types";
+import { canUseAgentTool } from "./tool-policy";
 export async function agentCapabilities(userId: string) {
   const actor = await paymentActor(userId);
   return {
     date: new Date().toISOString().slice(0, 10),
+    role: actor.role,
+    privacy:
+      "Only your own private data is available. Linked-parent approvals and admin settlement expose only necessary payment details. Other users' accounts, chats, reports and credentials are never sent to the provider.",
+    availableTools: [
+      "getAccounts",
+      "analyseTransactions",
+      "searchTransactions",
+      "getPaymentOptions",
+      "getPaymentRequests",
+      "getBeneficiaries",
+      "getApprovals",
+      "getTransfers",
+      "getSettlementQueue",
+      "getAdminConfiguration",
+      "calculate",
+      "getActivity",
+    ].filter((name) => canUseAgentTool(actor.role as Role, name)),
     routes: agentRoutes.filter((path) => canOpen(actor.role as Role, path)),
     actions: Object.entries(agentActionCatalog)
       .filter(([, v]) => (v.roles as readonly string[]).includes(actor.role))
@@ -29,16 +47,22 @@ export async function agentCapabilities(userId: string) {
     secureForms: {
       card: "payments",
       password: "settings",
-      apiKey: "settings",
+      apiKey: "api-keys",
       profilePhoto: "settings",
       csvImport: "transactions",
       checkout: "subscription/checkout",
       closeAccount: "settings",
+      exportData: "settings",
+      adminUsers: actor.role === "ADMIN" ? "admin/users" : null,
+      adminTeam: actor.role === "ADMIN" ? "admin/team" : null,
+      adminReports: actor.role === "ADMIN" ? "admin/reports" : null,
     },
   };
 }
 export async function validateAgentResponse(userId: string, input: unknown) {
   const v = responseSchema.parse(input);
+  if (v.type !== "require_answer")
+    requireCondition(v.message.trim(), "VALIDATION_ERROR");
   if (v.type === "open_page") {
     requireCondition(v.url, "VALIDATION_ERROR");
     const route = v.url.replace(/^\/(en|zh-CN|bn-BD)\//, "").replace(/^\//, "");
@@ -113,7 +137,7 @@ export async function agentWorkspaceData(userId: string, topic: string) {
     transactions:
       "SELECT id,account_id,description,amount,currency,category,type,date FROM transactions WHERE user_id=? ORDER BY date DESC LIMIT 50",
     alerts:
-      "SELECT id,type,detail,status FROM alerts WHERE user_id=? AND status NOT IN ('DISMISSED','RESOLVED') ORDER BY created_at DESC LIMIT 50",
+      "SELECT id,type,detail,status FROM alerts WHERE user_id=? AND status NOT IN ('DISMISSED','RESOLVED') AND NOT EXISTS (SELECT 1 FROM generated_alerts g WHERE g.alert_id=alerts.id AND g.source_student IS NOT NULL) ORDER BY created_at DESC LIMIT 50",
     subscriptions:
       "SELECT s.plan_id,s.status,s.ends_at,p.limits FROM subscriptions s JOIN plans p ON p.id=s.plan_id WHERE s.user_id=?",
     settings:
@@ -145,9 +169,9 @@ export async function agentWorkspaceData(userId: string, topic: string) {
         ]),
       ),
       category_limits: Object.fromEntries(
-        Object.entries(parseJson<Record<string, string>>(f.category_limits, {})).map(
-          ([key, v]) => [key, inCurrency(String(v), "CAD", "CNY", rates)],
-        ),
+        Object.entries(
+          parseJson<Record<string, string>>(f.category_limits, {}),
+        ).map(([key, v]) => [key, inCurrency(String(v), "CAD", "CNY", rates)]),
       ),
     }));
   }

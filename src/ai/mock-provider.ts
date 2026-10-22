@@ -1,7 +1,21 @@
 import { structuredAgentResult } from "./structured-response";
 import { runTool, type ToolName } from "./tools";
 import type { Row } from "@/types";
+import { paymentActor } from "@/services/payment.service";
 export async function mockAgent(userId: string, runId: string, goal: string) {
+  if ((await paymentActor(userId)).role === "ADMIN") {
+    const capabilities = await runTool(
+      userId,
+      runId,
+      "getActionCapabilities",
+      {},
+    );
+    return structuredAgentResult(
+      { getActionCapabilities: capabilities },
+      ["getActionCapabilities"],
+      "Demo mode shows your permitted actions. Select a configured AI model to work with administration through natural language.",
+    );
+  }
   const text = goal.toLowerCase();
   const navigation = text.match(
     /^(?:open|go to|show me) (?:the )?(tuition(?: planner)?|budget|rent plan|settings|payments|beneficiaries|transactions|wallet|family|alerts|subscription|credit|my money)(?: page)?[.!]?$/,

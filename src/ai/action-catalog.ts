@@ -13,6 +13,8 @@ import { beneficiarySchema } from "@/lib/payment-rules";
 const student = ["STUDENT"];
 const customer = ["STUDENT", "PARENT"];
 const parent = ["PARENT"];
+const admin = ["ADMIN"];
+const everyone = ["STUDENT", "PARENT", "ADMIN"];
 export const agentActionCatalog = {
   saveAccount: {
     roles: customer,
@@ -116,7 +118,7 @@ export const agentActionCatalog = {
       .strict(),
   },
   updatePreferences: {
-    roles: customer,
+    roles: everyone,
     route: "settings",
     description:
       "Change theme, language, country, currency, time zone or notifications.",
@@ -136,7 +138,7 @@ export const agentActionCatalog = {
       .strict(),
   },
   updateProfile: {
-    roles: customer,
+    roles: everyone,
     route: "settings",
     description:
       "Change your display name. Photos and email use the secure settings page.",
@@ -262,14 +264,14 @@ export const agentActionCatalog = {
       .strict(),
   },
   selectAiModel: {
-    roles: customer,
+    roles: everyone,
     route: "agent",
     description:
-      "Choose an available model ID or mock. API keys must be entered in Settings.",
+      "Choose an available model ID or mock. API keys must be entered on API Keys.",
     schema: z.object({ model_id: id }).strict(),
   },
   submitReport: {
-    roles: customer,
+    roles: everyone,
     route: "reports",
     description: "Submit a support report after review.",
     schema: z
@@ -288,11 +290,205 @@ export const agentActionCatalog = {
       })
       .strict(),
   },
+  decideApproval: {
+    roles: parent,
+    route: "parent/approvals",
+    description:
+      "Review a legacy remittance approval. Requires explicit confirmation.",
+    schema: z
+      .object({
+        id,
+        decision: z.enum(["APPROVED", "REJECTED"]),
+        reason: z.string().min(3).max(500),
+      })
+      .strict(),
+  },
+  settlePaymentRequest: {
+    roles: admin,
+    route: "admin/settlements",
+    description:
+      "Review a manual payment settlement transition. Requires explicit confirmation; never invent a payout reference.",
+    schema: z
+      .object({
+        id,
+        status: z.enum(["PROCESSING", "COMPLETED", "REJECTED", "FAILED"]),
+        note: z.string().min(3).max(500),
+        reference: z.string().max(100),
+      })
+      .strict(),
+  },
+  saveRate: {
+    roles: admin,
+    route: "admin/finance",
+    description: "Update a sandbox FX rate after review.",
+    schema: z
+      .object({ currency, rate: z.string().regex(/^\d{1,10}(\.\d{1,8})?$/) })
+      .strict(),
+  },
+  saveFinancialPolicy: {
+    roles: admin,
+    route: "admin/finance",
+    description:
+      "Review platform financial ceilings in RMB. Read existing configuration and preserve unchanged values.",
+    schema: z
+      .object({
+        dailyRmb: nonnegative,
+        monthlyRmb: nonnegative,
+        largeRmb: nonnegative,
+        frequency: z.number().int().min(1).max(1000),
+      })
+      .strict(),
+  },
+  saveCorridor: {
+    roles: admin,
+    route: "admin/finance",
+    description: "Add or remove a remittance currency route.",
+    schema: z
+      .object({
+        provider_id: id,
+        source_currency: currency,
+        target_currency: currency,
+        remove: z.boolean(),
+      })
+      .strict(),
+  },
+  saveCountry: {
+    roles: admin,
+    route: "admin/catalog",
+    description: "Review a country catalog change.",
+    schema: z
+      .object({
+        code: z.string().regex(/^[A-Z]{2}$/),
+        name: z.string().min(2).max(100),
+        currency_code: currency,
+        active: z.boolean(),
+      })
+      .strict(),
+  },
+  saveCurrency: {
+    roles: admin,
+    route: "admin/catalog",
+    description: "Review a currency catalog and rate change.",
+    schema: z
+      .object({
+        code: currency,
+        name: z.string().min(2).max(80),
+        symbol: z.string().min(1).max(10),
+        rate: z.string().regex(/^\d{1,10}(\.\d{1,8})?$/),
+        active: z.boolean(),
+      })
+      .strict(),
+  },
+  savePaymentPolicy: {
+    roles: admin,
+    route: "admin/payment-methods",
+    description: "Review the one-time beneficiary payment limit in RMB.",
+    schema: z
+      .object({ nonBeneficiaryRmb: z.string().regex(/^\d{1,7}(\.\d{1,2})?$/) })
+      .strict(),
+  },
+  savePaymentMethod: {
+    roles: admin,
+    route: "admin/payment-methods",
+    description:
+      "Review a payment channel configuration. Never invent receiving instructions.",
+    schema: z
+      .object({
+        code: z.enum([
+          "INTERNAL",
+          "CARD",
+          "BANK",
+          "PAYPAL",
+          "ALIPAY",
+          "WECHAT",
+          "UNIONPAY",
+        ]),
+        name: z.string().min(2).max(80),
+        active: z.boolean(),
+        deposit_enabled: z.boolean(),
+        withdrawal_enabled: z.boolean(),
+        instructions: z.string().max(2000),
+        currencies: z.array(currency).min(1).max(200),
+      })
+      .strict(),
+  },
+  saveCreditGuidance: {
+    roles: admin,
+    route: "admin/finance",
+    description: "Review the educational credit checklist for a country.",
+    schema: z
+      .object({
+        country: z.string().regex(/^(default|[A-Z]{2})$/),
+        tasks: z
+          .array(
+            z.enum([
+              "creditReminders",
+              "creditUtilization",
+              "creditHistory",
+              "creditReport",
+            ]),
+          )
+          .min(1)
+          .max(4),
+      })
+      .strict(),
+  },
+  saveProvider: {
+    roles: admin,
+    route: "admin/finance",
+    description:
+      "Review remittance provider configuration. Read and preserve unchanged fields.",
+    schema: z
+      .object({
+        id,
+        name: z.string().min(2).max(100),
+        base_fee: nonnegative,
+        percentage_fee: z.number().min(0).max(0.25),
+        spread: z.number().min(0).max(0.25),
+        minimum: nonnegative,
+        maximum: nonnegative,
+        eta_days: z.number().int().min(0).max(30),
+        reliability: z.number().int().min(0).max(100),
+        active: z.boolean(),
+      })
+      .strict(),
+  },
+  savePlan: {
+    roles: admin,
+    route: "admin/plans",
+    description:
+      "Review subscription plan pricing and quotas. Read and preserve unchanged values.",
+    schema: z
+      .object({
+        id,
+        name: z.string().min(2).max(40),
+        description_key: z.string().max(80),
+        monthly: nonnegative,
+        yearly: nonnegative,
+        currency,
+        trial_days: z.number().int().min(0).max(365),
+        active: z.boolean(),
+        recommended: z.boolean(),
+        display_order: z.number().int().min(0).max(100),
+        limits: z
+          .object({
+            ACCOUNTS: z.number().int().min(1),
+            AGENT_MESSAGES: z.number().int().min(0),
+            TRANSFER_SIMULATIONS: z.number().int().min(0),
+            TUITION_PLANS: z.number().int().min(0),
+            CSV_IMPORTS: z.number().int().min(0),
+            PARENT_LINKS: z.number().int().min(0),
+          })
+          .strict(),
+      })
+      .strict(),
+  },
 } as const;
 export type AgentActionName = keyof typeof agentActionCatalog;
 export const responseSchema = z
   .object({
     type: z.enum(["message", "open_page", "require_answer"]),
+    intent: z.string().min(1).max(200).default("assist"),
     message: z.string().max(4000),
     url: z.string().max(160).nullable(),
     question: z.string().max(1000).nullable(),
@@ -331,6 +527,22 @@ export const agentRoutes = [
   "subscription",
   "subscription/checkout",
   "settings",
+  "api-keys",
+  "agent",
+  "admin",
+  "admin/users",
+  "admin/reports",
+  "admin/team",
+  "admin/finance",
+  "admin/catalog",
+  "admin/plans",
+  "admin/subscriptions",
+  "admin/settlements",
+  "admin/payment-methods",
+  "admin/models",
+  "admin/audit",
+  "admin/agent",
+  "admin/risk",
   "reports",
   "security-assessment",
 ];

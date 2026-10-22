@@ -433,6 +433,8 @@ stateDiagram-v2
 
 ## AI Copilot & Structured Tool Engine
 
+The upgraded agent supports Gemini, OpenAI, Claude and compatible providers, persistent full-context conversations, role-checked action reviews, and provider usage monitoring. See [AI Agent configuration, migration and verification](docs/AI_AGENT.md) for the current behavior and testing boundaries.
+
 The AI Copilot does not operate as an unconstrained chatbot; it uses an application-owned, schema-validated tool pipeline:
 
 ```mermaid

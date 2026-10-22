@@ -12,6 +12,13 @@ import { encryptSecret, decryptSecret } from "@/lib/secrets";
 import { validCurrency } from "@/lib/catalog";
 import { getRates } from "@/services/currency.service";
 import { D } from "@/lib/money";
+import {
+  providerCompany,
+  priceSchema,
+  validateBaseUrl,
+  type ProviderCompany,
+} from "@/ai/provider-config";
+import { recordProviderUsage } from "@/ai/usage";
 const url = z
   .string()
   .max(300)
@@ -91,14 +98,25 @@ export async function saveAiModel(input: unknown) {
       .object({
         id: z.string().max(64).optional(),
         shared: z.boolean().default(false),
-        company: z.enum(["OPENAI", "GEMINI"]),
+        company: providerCompany,
         label: z.string().min(2).max(100),
-        model: z.string().regex(/^[a-zA-Z0-9._:-]{1,100}$/),
-        key: z.string().max(500).optional(),
+        model: z.string().regex(/^[a-zA-Z0-9._:/-]{1,100}$/),
+        key: z.string().trim().max(500).optional(),
+        base_url: z.string().max(300).optional(),
+        input_price: priceSchema,
+        output_price: priceSchema,
         active: z.boolean(),
       })
       .parse(input);
     if (v.shared) await requireAdmin("models");
+    let baseUrl: string | null = null;
+    if (v.company === "COMPATIBLE") {
+      try {
+        baseUrl = validateBaseUrl(v.base_url || "");
+      } catch {
+        requireCondition(false, "AI_ENDPOINT_NOT_ALLOWED");
+      }
+    }
     const owner = v.shared ? null : u.id;
     const key = v.id || randomUUID();
     await atomic(async (db) => {
@@ -116,8 +134,17 @@ export async function saveAiModel(input: unknown) {
       );
       if (old) {
         await write(
-          "UPDATE ai_models SET company=?,label=?,model=?,active=? WHERE id=?",
-          [v.company, v.label, v.model, v.active, key],
+          "UPDATE ai_models SET company=?,label=?,model=?,active=?,base_url=?,input_price=?,output_price=? WHERE id=?",
+          [
+            v.company,
+            v.label,
+            v.model,
+            v.active,
+            baseUrl,
+            v.input_price,
+            v.output_price,
+            key,
+          ],
           db,
         );
         if (v.key) {
@@ -130,7 +157,7 @@ export async function saveAiModel(input: unknown) {
         }
       } else
         await write(
-          "INSERT INTO ai_models(id,owner_id,company,label,model,key_cipher,key_last_four,active) VALUES (?,?,?,?,?,?,?,?)",
+          "INSERT INTO ai_models(id,owner_id,company,label,model,key_cipher,key_last_four,active,base_url,input_price,output_price) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
           [
             key,
             owner,
@@ -140,6 +167,9 @@ export async function saveAiModel(input: unknown) {
             encryptSecret(v.key!),
             v.key!.slice(-4),
             v.active,
+            baseUrl,
+            v.input_price,
+            v.output_price,
           ],
           db,
         );
@@ -360,19 +390,54 @@ export async function testAiModel(id: string, shared = false) {
     const u = await requireUser();
     z.string().min(1).max(64).parse(id);
     if (shared) await requireAdmin("models");
-    const [model] = await rows<{
-      company: "OPENAI" | "GEMINI";
-      model: string;
-      key_cipher: string;
-    }>(
-      "SELECT company,model,key_cipher FROM ai_models WHERE id=? AND owner_id <=> ?",
-      [id, shared ? null : u.id],
-    );
+    let model:
+      | {
+          company: ProviderCompany;
+          model: string;
+          key_cipher: string;
+          base_url: string | null;
+          input_price: string | null;
+          output_price: string | null;
+        }
+      | undefined;
+    try {
+      const list = await rows<{
+        company: ProviderCompany;
+        model: string;
+        key_cipher: string;
+        base_url: string | null;
+        input_price: string | null;
+        output_price: string | null;
+      }>(
+        "SELECT company,model,key_cipher,base_url,input_price,output_price FROM ai_models WHERE id=? AND owner_id <=> ?",
+        [id, shared ? null : u.id],
+      );
+      model = list[0];
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("base_url")) {
+        const list = await rows<{
+          company: ProviderCompany;
+          model: string;
+          key_cipher: string;
+          base_url: string | null;
+          input_price: string | null;
+          output_price: string | null;
+        }>(
+          "SELECT company,model,key_cipher,NULL AS base_url,NULL AS input_price,NULL AS output_price FROM ai_models WHERE id=? AND owner_id <=> ?",
+          [id, shared ? null : u.id],
+        );
+        model = list[0];
+      } else {
+        throw err;
+      }
+    }
     requireCondition(model, "NOT_FOUND");
     const { testModelConnection } = await import("@/ai/provider-health");
     const result = await testModelConnection({
       ...model,
       key: decryptSecret(model.key_cipher),
+      onUsage: (usage) => recordProviderUsage(u.id, null, id, usage),
     });
     await audit(u.id, "AI_MODEL_TESTED", "ai_models", id, {
       model: model.model,
