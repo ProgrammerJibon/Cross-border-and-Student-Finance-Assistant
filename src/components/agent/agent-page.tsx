@@ -10,6 +10,9 @@ import {
   FiArrowUpRight,
   FiShield,
   FiCircle,
+  FiPlus,
+  FiMessageSquare,
+  FiClock,
 } from "react-icons/fi";
 import {
   askAgent,
@@ -25,7 +28,6 @@ import { selectAiModel } from "@/actions/platform.actions";
 import { useApp } from "@/components/ui/providers";
 import {
   Card,
-  Heading,
   Badge,
   Progress,
   ExportButton,
@@ -43,6 +45,14 @@ type AgentResult = {
   amount: string;
   toolCalls?: { name: string; status: string }[];
 };
+
+function formatConversationTitle(text: string): string {
+  const words = (text || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "Untitled Conversation";
+  if (words.length <= 20) return words.join(" ");
+  return words.slice(0, 20).join(" ") + "...";
+}
+
 export function AgentPage({ data }: { data: Workspace }) {
   const { t, locale, run } = useApp();
   const router = useRouter();
@@ -61,10 +71,43 @@ export function AgentPage({ data }: { data: Workspace }) {
   const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null);
   const [budgetReview, setBudgetReview] = useState(false);
-  const [model, setModel] = useState(data.user.ai_model_id || "mock");
+  const activeModels = data.aiModels.filter((m) => m.active);
+  const defaultModel =
+    data.user.ai_model_id &&
+    activeModels.some((m) => String(m.id) === String(data.user.ai_model_id))
+      ? String(data.user.ai_model_id)
+      : activeModels[0]?.id
+        ? String(activeModels[0].id)
+        : "";
+  const [model, setModel] = useState<string>(defaultModel);
   const [modelBusy, setModelBusy] = useState(false);
   const [result, setResult] = useState<AgentResult | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom("smooth");
+  }, [result, liveSteps, busy, error, goal, thread, scrollToBottom]);
+
+  useEffect(() => {
+    if (rateLimitCountdown === null || rateLimitCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setRateLimitCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(timer);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [rateLimitCountdown]);
+
   const storageKey = `finbridge-agent-${data.user.id}`;
   const loadThread = useCallback(
     async (id: string) => {
@@ -120,37 +163,48 @@ export function AgentPage({ data }: { data: Workspace }) {
     };
   }, [loadThread, storageKey]);
   const submit = async (prompt: string) => {
-    if (!prompt.trim() || submitting.current || historyBusy || modelBusy)
+    const trimmed = prompt.trim();
+    if (!trimmed || submitting.current || historyBusy || modelBusy)
       return;
     submitting.current = true;
+    setInput("");
     const previousRunId = selectedRunId || undefined;
     const requestId = crypto.randomUUID();
     setRunningId(requestId);
     setLiveSteps([]);
-    setGoal(prompt);
+    setGoal(trimmed);
     setBusy(true);
     setResult(null);
     setError("");
     try {
-      const r = await askAgent(prompt, model, previousRunId, requestId);
+      const r = await askAgent(trimmed, model, previousRunId, requestId);
       if (r.success) {
         setResult(r.data);
         setSelectedRunId(r.data.id);
         localStorage.setItem(storageKey, r.data.id);
         const saved = await getAgentConversation(r.data.id);
         if (saved.success) setThread(saved.data);
-        setInput("");
-        setConversations((c) => [
-          {
+        setRateLimitCountdown(null);
+        setConversations((c) => {
+          const updatedRun: SavedTurn = {
             id: r.data.id,
-            goal: prompt,
+            goal: trimmed,
             status: "COMPLETED",
             result: JSON.stringify(r.data),
             provider: model,
             created_at: new Date().toISOString(),
-          },
-          ...c,
-        ]);
+            previous_run_id: previousRunId || null,
+          };
+          if (previousRunId) {
+            const idx = c.findIndex((turn) => turn.id === previousRunId);
+            if (idx !== -1) {
+              const nextList = [...c];
+              nextList[idx] = updatedRun;
+              return nextList;
+            }
+          }
+          return [updatedRun, ...c];
+        });
         const navigation = r.data.outputs.respond as
           { type?: string; url?: string } | undefined;
         if (navigation?.type === "open_page" && navigation.url)
@@ -172,17 +226,35 @@ export function AgentPage({ data }: { data: Workspace }) {
             outputs: partial.outputs || {},
             steps: partial.steps || [],
           });
-          setConversations((c) => [{ ...last }, ...c]);
+          setConversations((c) => {
+            if (previousRunId) {
+              const idx = c.findIndex((turn) => turn.id === previousRunId);
+              if (idx !== -1) {
+                const nextList = [...c];
+                nextList[idx] = { ...last };
+                return nextList;
+              }
+            }
+            return [{ ...last }, ...c];
+          });
         }
         setError(r.code);
-        setInput(prompt);
+        if (
+          [
+            "AI_RATE_LIMITED",
+            "AI_QUOTA_EXCEEDED",
+            "AI_OUTPUT_LIMIT",
+            "PLAN_LIMIT_REACHED",
+          ].includes(r.code)
+        ) {
+          setRateLimitCountdown(60);
+        }
       }
     } catch {
       // A lost HTTP response may still have completed server-side. Preserve its
       // identifier so refresh/reopen can recover it without repeating mutations.
       localStorage.setItem(storageKey, requestId);
       setError("AI_UNAVAILABLE");
-      setInput(prompt);
     }
     submitting.current = false;
     setBusy(false);
@@ -244,111 +316,87 @@ export function AgentPage({ data }: { data: Workspace }) {
   )?.quotes;
   return (
     <>
-      <Heading
-        title={t("agentTitle")}
-        subtitle={t("agentSubtitle")}
-        action={
-          <Badge>
-            <FiShield />
-            {t("sandbox")}
-          </Badge>
-        }
-      />
-      <div className="agent-grid">
-        <Card className="agent-conversation">
-          <div className="agent-header">
-            <span className="agent-avatar">
-              <FiZap />
-            </span>
-            <div>
-              <strong>{t("agent")}</strong>
-              <small>
-                <i />
-                {model === "mock"
-                  ? t("mockMode")
-                  : String(
-                      data.aiModels.find((m) => m.id === model)?.company || "",
-                    )}
-              </small>
+      <div className="agent-page-layout">
+        <aside className="agent-history-sidebar" aria-label={t("previousConversations")}>
+          <div className="agent-history-header">
+            <div className="agent-history-header-top">
+              <strong>{t("previousConversations")}</strong>
+              <Badge>{conversations.length}</Badge>
             </div>
-            <Badge>AI</Badge>
-            <select
-              aria-label={t("selectedModel")}
-              value={model}
-              disabled={busy || modelBusy}
-              onChange={async (e) => {
-                const id = e.target.value;
-                const previous = model;
-                setModel(id);
-                setModelBusy(true);
-                try {
-                  const result = await run(() => selectAiModel(id), {
-                    quiet: true,
-                    refresh: false,
-                  });
-                  if (result === undefined) setModel(previous);
-                } finally {
-                  setModelBusy(false);
-                }
+            <button
+              type="button"
+              className="agent-new-chat-btn"
+              disabled={busy || historyBusy}
+              onClick={() => {
+                setSelectedRunId("");
+                setThread([]);
+                localStorage.removeItem(storageKey);
+                setResult(null);
+                setGoal("");
+                setInput("");
+                setError("");
               }}
             >
-              <option value="mock">{t("mockMode")}</option>
-              {data.aiModels
-                .filter((m) => m.active)
-                .map((m) => (
-                  <option value={String(m.id)} key={String(m.id)}>
-                    {m.label} · {m.model}
-                  </option>
-                ))}
-            </select>
+              <FiPlus />
+              <span>{t("newConversation")}</span>
+            </button>
           </div>
-          <div className="agent-content">
-            <p className="muted">
-              {t("agentKeysHelp")}{" "}
-              <Link className="text-link" href={`/${locale}/api-keys`}>
-                {t("api-keys")}
-              </Link>
-            </p>
-            {model === "mock" && <p className="muted">{t("agentDemoHelp")}</p>}
-            <label className="model-select">
-              {t("previousConversations")}
-              <select
-                aria-label={t("previousConversations")}
-                value={selectedRunId}
-                disabled={busy || historyBusy}
-                onChange={async (e) => {
-                  const id = e.target.value;
-                  if (!e.target.value) {
-                    setSelectedRunId("");
-                    setThread([]);
-                    localStorage.removeItem(storageKey);
-                    setResult(null);
-                    setGoal("");
-                    setInput("");
-                    setError("");
-                    return;
-                  }
-                  setHistoryBusy(true);
-                  try {
-                    await loadThread(id);
-                  } catch {
-                    setError("AI_UNAVAILABLE");
-                  } finally {
-                    setHistoryBusy(false);
-                  }
-                }}
-              >
-                <option value="">{t("newConversation")}</option>
-                {conversations.map((r) => (
-                  <option value={String(r.id)} key={String(r.id)}>
-                    {String(r.goal).slice(0, 75)} · {t(String(r.status))}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {hasMore && (
+          <div className="agent-history-list">
+            {conversations.length === 0 ? (
+              <div className="agent-history-empty">
+                <p className="muted">{t("emptyBody")}</p>
+              </div>
+            ) : (
+              conversations.map((r) => {
+                const isSelected = selectedRunId === String(r.id);
+                return (
+                  <button
+                    type="button"
+                    key={String(r.id)}
+                    className={`agent-history-item ${isSelected ? "active" : ""}`}
+                    disabled={busy || historyBusy}
+                    onClick={async () => {
+                      if (isSelected) return;
+                      setHistoryBusy(true);
+                      try {
+                        await loadThread(String(r.id));
+                      } catch {
+                        setError("AI_UNAVAILABLE");
+                      } finally {
+                        setHistoryBusy(false);
+                      }
+                    }}
+                  >
+                    <span className="history-item-icon">
+                      <FiMessageSquare />
+                    </span>
+                    <div className="history-item-content">
+                      <span className="history-item-goal" title={String(r.goal)}>
+                        {formatConversationTitle(String(r.goal))}
+                      </span>
+                      <span className="history-item-meta">
+                        {r.created_at
+                          ? new Date(r.created_at).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : ""}
+                        {" · "}
+                        <span className={`status-pill ${String(r.status).toLowerCase()}`}>
+                          {t(String(r.status))}
+                        </span>
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+          {hasMore && (
+            <div className="agent-history-footer">
               <button
-                className="text-link"
+                type="button"
+                className="button secondary small full-width"
                 disabled={busy || historyBusy}
                 onClick={async () => {
                   setHistoryBusy(true);
@@ -372,6 +420,68 @@ export function AgentPage({ data }: { data: Workspace }) {
               >
                 {t("loadOlderConversations")}
               </button>
+            </div>
+          )}
+        </aside>
+
+        <Card className="agent-conversation">
+          <div className="agent-header">
+            <span className="agent-avatar">
+              <FiZap />
+            </span>
+            <div>
+              <strong>{t("agent")}</strong>
+              <small>
+                <i />
+                {String(
+                  activeModels.find((m) => m.id === model)?.label ||
+                    activeModels.find((m) => m.id === model)?.company ||
+                    t("agent"),
+                )}
+              </small>
+            </div>
+            <Badge>AI</Badge>
+            <select
+              aria-label={t("selectedModel")}
+              value={model}
+              disabled={busy || modelBusy || activeModels.length === 0}
+              onChange={async (e) => {
+                const id = e.target.value;
+                const previous = model;
+                setModel(id);
+                setModelBusy(true);
+                try {
+                  const result = await run(() => selectAiModel(id), {
+                    quiet: true,
+                    refresh: false,
+                  });
+                  if (result === undefined) setModel(previous);
+                } finally {
+                  setModelBusy(false);
+                }
+              }}
+            >
+              {activeModels.length === 0 ? (
+                <option value="" disabled>
+                  {t("noActiveModels") || "No AI models available"}
+                </option>
+              ) : (
+                activeModels.map((m) => (
+                  <option value={String(m.id)} key={String(m.id)}>
+                    {m.label} · {m.model}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          <div className="agent-content">
+            {activeModels.length === 0 && (
+              <p className="muted">
+                {t("agentKeysHelp")}{" "}
+                <Link className="text-link" href={`/${locale}/api-keys`}>
+                  {t("api-keys")}
+                </Link>
+              </p>
             )}
             <div aria-label={t("conversationHistory")}>
               {thread
@@ -408,7 +518,46 @@ export function AgentPage({ data }: { data: Workspace }) {
                   );
                 })}
             </div>
-            {error && <p role="alert">{t(error)}</p>}
+            {error && (
+              <div
+                className={`agent-error-banner ${["AI_RATE_LIMITED", "AI_QUOTA_EXCEEDED", "AI_OUTPUT_LIMIT", "PLAN_LIMIT_REACHED"].includes(error) ? "token-limit-alert" : ""}`}
+                role="alert"
+              >
+                <div className="error-banner-header">
+                  <FiClock className="error-icon" />
+                  <div>
+                    <strong>
+                      {["AI_RATE_LIMITED", "AI_QUOTA_EXCEEDED"].includes(error)
+                        ? t("tokenLimitReached")
+                        : error === "PLAN_LIMIT_REACHED"
+                          ? t("planLimitReached") || "Plan Message Limit Reached"
+                          : t(error)}
+                    </strong>
+                    <p className="error-desc">{t(error)}</p>
+                  </div>
+                </div>
+                {rateLimitCountdown !== null && rateLimitCountdown > 0 && (
+                  <div className="countdown-box">
+                    <span className="countdown-label">
+                      {t("tokenRefreshCountdown")}{" "}
+                      {activeModels.find((m) => m.id === model)?.label ||
+                        activeModels.find((m) => m.id === model)?.model ||
+                        "this model"}
+                    </span>
+                    <span className="countdown-timer">
+                      {Math.floor(rateLimitCountdown / 60)}:
+                      {(rateLimitCountdown % 60).toString().padStart(2, "0")}s
+                    </span>
+                  </div>
+                )}
+                {["AI_RATE_LIMITED", "AI_QUOTA_EXCEEDED"].includes(error) &&
+                  activeModels.length > 1 && (
+                    <div className="error-action-hint">
+                      <span>💡 {t("switchModelHint")}</span>
+                    </div>
+                  )}
+              </div>
+            )}
             {!goal ? (
               <div className="agent-welcome">
                 <span className="agent-large-icon">
@@ -591,6 +740,7 @@ export function AgentPage({ data }: { data: Workspace }) {
                 </div>
               </>
             )}
+            <div ref={messagesEndRef} style={{ height: "1px", width: "100%" }} />
           </div>
           <form
             className="agent-composer"
@@ -628,6 +778,16 @@ export function AgentPage({ data }: { data: Workspace }) {
           </div>
         </Card>
         <div className="agent-context">
+          <Card className="agent-hero-card">
+            <div className="agent-hero-top">
+              <Badge>
+                <FiShield />
+                {t("sandbox")}
+              </Badge>
+            </div>
+            <h2 className="agent-hero-title">{t("agentTitle")}</h2>
+            <p className="agent-hero-subtitle">{t("agentSubtitle")}</p>
+          </Card>
           <AgentUsagePanel revision={`${selectedRunId}-${busy}`} />
           <Card>
             <h3>{t("context")}</h3>

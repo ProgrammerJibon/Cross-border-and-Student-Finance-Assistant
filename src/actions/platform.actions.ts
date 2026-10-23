@@ -211,7 +211,7 @@ export async function selectAiModel(id: string) {
   return action(async () => {
     const u = await requireUser();
     z.string().max(64).parse(id);
-    if (id !== "mock")
+    if (id && id !== "mock")
       requireCondition(
         (
           await rows(
@@ -222,7 +222,7 @@ export async function selectAiModel(id: string) {
         "NOT_FOUND",
       );
     await write("UPDATE user_preferences SET ai_model_id=? WHERE user_id=?", [
-      id === "mock" ? null : id,
+      !id || id === "mock" ? null : id,
       u.id,
     ]);
     return null;

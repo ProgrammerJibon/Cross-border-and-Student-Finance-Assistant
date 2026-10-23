@@ -8,6 +8,20 @@ export async function migrate(db) {
   await migratePlatform(db);
   await migratePayments(db);
   await migrateAgent(db);
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS notification_subscriptions (
+      id VARCHAR(64) PRIMARY KEY,
+      user_id VARCHAR(64) NOT NULL,
+      endpoint VARCHAR(1000) NOT NULL,
+      expiration_time BIGINT NULL,
+      p256dh VARCHAR(255) NOT NULL,
+      auth VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_user_endpoint (user_id, endpoint(255)),
+      INDEX idx_user (user_id)
+    )`,
+  );
   const [columns] = await db.execute(
     "SELECT DATETIME_PRECISION precision_value FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='fx_rates' AND COLUMN_NAME='recorded_at'",
   );

@@ -28,6 +28,32 @@ export async function readNotifications() {
     return null;
   });
 }
+export async function markNotificationRead(id: string) {
+  return action(async () => {
+    const u = await requireUser();
+    z.string().min(1).max(64).parse(id);
+    await write("UPDATE notifications SET is_read=1 WHERE id=? AND user_id=?", [id, u.id]);
+    return null;
+  });
+}
+export async function saveNotificationSubscription(input: unknown) {
+  return action(async () => {
+    const u = await requireUser();
+    const v = z
+      .object({
+        endpoint: z.string().min(1).max(1000),
+        expirationTime: z.number().nullable().optional(),
+        p256dh: z.string().min(1).max(255),
+        auth: z.string().min(1).max(255),
+      })
+      .parse(input);
+    await write(
+      "INSERT INTO notification_subscriptions (id, user_id, endpoint, expiration_time, p256dh, auth) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE endpoint=VALUES(endpoint), expiration_time=VALUES(expiration_time), p256dh=VALUES(p256dh), auth=VALUES(auth)",
+      [randomUUID(), u.id, v.endpoint, v.expirationTime || null, v.p256dh, v.auth],
+    );
+    return null;
+  });
+}
 export async function createReminder(detail: string) {
   return action(async () => {
     const u = await requireUser("STUDENT");

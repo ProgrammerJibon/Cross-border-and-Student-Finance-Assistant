@@ -74,12 +74,23 @@ export function conversationMessages(turns: SavedTurn[]): ChatMessage[] {
   const messages: ChatMessage[] = [];
   for (const turn of turns) {
     messages.push({ role: "user", content: turn.goal });
+    const parsed = parseJson<{
+      summary?: string;
+      summaryKey?: string;
+      outputs?: {
+        respond?: { message?: string; question?: string; type?: string };
+      };
+    }>(turn.result, {});
+
+    const assistantContent =
+      parsed.outputs?.respond?.message ||
+      parsed.summary ||
+      parsed.outputs?.respond?.question ||
+      (turn.status === "COMPLETED" ? "Completed." : `Status: ${turn.status}`);
+
     messages.push({
       role: "assistant",
-      content: JSON.stringify({
-        status: turn.status,
-        result: parseJson(turn.result, null),
-      }),
+      content: assistantContent,
     });
   }
   // Never silently discard earlier turns. Let users keep the thread and choose a

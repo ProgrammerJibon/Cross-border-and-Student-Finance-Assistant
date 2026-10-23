@@ -1,10 +1,10 @@
-import { mockAgent } from "./mock-provider";
 import { providerAgent } from "./provider-engine";
 import { resolveModel } from "./model-config";
 import { recordProviderUsage } from "./usage";
 import type { ChatMessage } from "./provider-config";
 import { paymentActor } from "@/services/payment.service";
-export const activeProvider = () => "mock";
+import { AppError } from "@/lib/errors";
+export const activeProvider = () => "live";
 export async function runAgent(
   userId: string,
   runId: string,
@@ -14,7 +14,7 @@ export async function runAgent(
   history: ChatMessage[] = [],
 ) {
   const config = await resolveModel(userId, modelId);
-  if (!config) return mockAgent(userId, runId, goal);
+  if (!config) throw new AppError("AI_UNAVAILABLE");
   return providerAgent(
     userId,
     runId,

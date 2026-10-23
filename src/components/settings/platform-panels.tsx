@@ -68,7 +68,7 @@ export function ModelManager({
           {t("selectedModel")}
           <select
             aria-label={t("selectedModel")}
-            value={data.user.ai_model_id || "mock"}
+            value={data.user.ai_model_id || ""}
             disabled={savingModel}
             onChange={async (e) => {
               setSavingModel(true);
@@ -76,7 +76,9 @@ export function ModelManager({
               setSavingModel(false);
             }}
           >
-            <option value="mock">{t("mockMode")}</option>
+            <option value="" disabled>
+              {t("selectModel") || "Select a model"}
+            </option>
             {data.aiModels
               .filter((m) => m.active)
               .map((m) => (

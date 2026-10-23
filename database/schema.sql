@@ -256,6 +256,20 @@ CREATE TABLE IF NOT EXISTS notifications (
   INDEX(user_id,is_read)
 );
 
+CREATE TABLE IF NOT EXISTS notification_subscriptions (
+  id VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  endpoint VARCHAR(1000) NOT NULL,
+  expiration_time BIGINT NULL,
+  p256dh VARCHAR(255) NOT NULL,
+  auth VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_user_endpoint (user_id, endpoint(255)),
+  INDEX(user_id)
+);
+
 CREATE TABLE IF NOT EXISTS agent_conversations (
   id VARCHAR(64) PRIMARY KEY,
   user_id VARCHAR(64) NOT NULL,

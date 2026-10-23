@@ -25,8 +25,10 @@ export async function askAgent(
     requireCondition(["STUDENT", "PARENT", "ADMIN"].includes(u.role));
     goal = z.string().trim().min(1).max(2000).parse(goal);
     if (modelId) z.string().max(64).parse(modelId);
-    const selected = modelId || u.ai_model_id || "mock";
+    const selected = modelId || u.ai_model_id;
+    requireCondition(selected && selected !== "mock", "AI_UNAVAILABLE");
     const config = await resolveModel(u.id, selected);
+    requireCondition(config, "AI_UNAVAILABLE");
     const history = previousRunId
       ? conversationMessages(
           await loadConversation(
@@ -67,7 +69,7 @@ export async function askAgent(
       await incrementUsage(u.id, "AGENT_MESSAGES", db);
       await write(
         "INSERT INTO agent_runs(id,user_id,goal,provider) VALUES (?,?,?,?)",
-        [runId, u.id, goal, config?.company || "mock"],
+        [runId, u.id, goal, config.company],
         db,
       );
       await write(
@@ -151,7 +153,7 @@ export async function getAgentHistory(page = 0) {
     const u = await requireUser();
     z.number().int().min(0).max(100000).parse(page);
     const runs = await rows<SavedTurn>(
-      "SELECT r.id,r.goal,r.status,r.provider,r.created_at,c.previous_run_id FROM agent_runs r LEFT JOIN agent_conversation_turns c ON c.run_id=r.id WHERE r.user_id=? ORDER BY r.created_at DESC,r.id DESC LIMIT 51 OFFSET " +
+      "SELECT r.id,r.goal,r.status,r.provider,r.created_at,c.previous_run_id FROM agent_runs r LEFT JOIN agent_conversation_turns c ON c.run_id=r.id WHERE r.user_id=? AND NOT EXISTS (SELECT 1 FROM agent_conversation_turns act WHERE act.previous_run_id=r.id) ORDER BY r.created_at DESC,r.id DESC LIMIT 51 OFFSET " +
         page * 50,
       [u.id],
     );

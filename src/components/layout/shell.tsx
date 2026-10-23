@@ -34,6 +34,8 @@ import {
   FiCheckCircle,
   FiLayers,
   FiFlag,
+  FiKey,
+  FiCheck,
 } from "react-icons/fi";
 import { appConfig } from "@/lib/config";
 import type { User, Row } from "@/types";
@@ -42,7 +44,11 @@ import { Modal } from "@/components/ui/primitives";
 import { updatePreferences } from "@/actions/preferences.actions";
 import { logout } from "@/actions/auth.actions";
 import { globalSearch } from "@/actions/dashboard.actions";
-import { readNotifications } from "@/actions/alert.actions";
+import {
+  readNotifications,
+  markNotificationRead,
+  saveNotificationSubscription,
+} from "@/actions/alert.actions";
 import { hasPermission } from "@/lib/admin-permissions";
 const subscribeSidebar = (cb: () => void) => {
   window.addEventListener("sidebar-state", cb);
@@ -107,26 +113,94 @@ export function LanguageSwitch() {
   const { locale, run, t } = useApp();
   const router = useRouter();
   const path = usePathname();
+  const flags: Record<string, string> = {
+    en: "🇺🇸",
+    "zh-CN": "🇨🇳",
+    "bn-BD": "🇧🇩",
+  };
   return (
-    <select
-      className="language-select"
-      aria-label={t("language")}
-      value={locale}
-      onChange={async (e) => {
-        const next = e.target.value;
-        const ok = await run(() => updatePreferences({ language: next }), {
-          quiet: true,
-          refresh: false,
-        });
-        if (ok) router.replace(path.replace(`/${locale}`, `/${next}`));
-      }}
-    >
-      <option value="en">EN</option>
-      <option value="zh-CN">中文</option>
-      <option value="bn-BD">বাংলা</option>
-    </select>
+    <div className="language-switch-wrapper">
+      <span className="language-flag" aria-hidden="true">
+        {flags[locale] || "🌐"}
+      </span>
+      <select
+        className="language-select"
+        aria-label={t("language")}
+        value={locale}
+        onChange={async (e) => {
+          const next = e.target.value;
+          localStorage.setItem("language", next);
+          document.cookie = `language=${next};path=/;SameSite=Lax;max-age=31536000`;
+          const ok = await run(() => updatePreferences({ language: next }), {
+            quiet: true,
+            refresh: false,
+          });
+          if (ok) router.replace(path.replace(`/${locale}`, `/${next}`));
+        }}
+      >
+        <option value="en">🇺🇸 EN</option>
+        <option value="zh-CN">🇨🇳 中文</option>
+        <option value="bn-BD">🇧🇩 বাংলা</option>
+      </select>
+    </div>
   );
 }
+function getNotificationRoute(
+  type: string,
+  detail: string,
+  role: string,
+  prefix: string,
+): string {
+  const tUpper = (type || "").toUpperCase();
+  const dUpper = (detail || "").toUpperCase();
+
+  if (
+    tUpper.includes("TUITION") ||
+    tUpper.includes("FUNDING_GAP") ||
+    dUpper.includes("TUITION")
+  ) {
+    return `${prefix}/tuition`;
+  }
+  if (tUpper.includes("BUDGET") || dUpper.includes("BUDGET")) {
+    return `${prefix}/budget`;
+  }
+  if (
+    tUpper.includes("LOW_BALANCE") ||
+    tUpper.includes("WALLET") ||
+    dUpper.includes("BALANCE")
+  ) {
+    return `${prefix}/wallet`;
+  }
+  if (
+    tUpper.includes("APPROVAL") ||
+    tUpper.includes("DECISION") ||
+    tUpper.includes("APPROVAL_REQUIRED")
+  ) {
+    return role === "PARENT"
+      ? `${prefix}/parent/approvals`
+      : `${prefix}/payments`;
+  }
+  if (tUpper.includes("LINK") || tUpper.includes("FAMILY")) {
+    return role === "PARENT" ? `${prefix}/parent` : `${prefix}/family`;
+  }
+  if (tUpper.includes("BENEFICIARY")) {
+    return role === "PARENT"
+      ? `${prefix}/parent/controls`
+      : `${prefix}/beneficiaries`;
+  }
+  if (tUpper.includes("REPORT")) {
+    return `${prefix}/reports`;
+  }
+  if (
+    tUpper.includes("TRANSFER") ||
+    tUpper.includes("PAYMENT") ||
+    tUpper.includes("SETTLE")
+  ) {
+    return `${prefix}/transactions`;
+  }
+  return `${prefix}/alerts`;
+}
+
 export function Shell({
   user,
   notifications,
@@ -139,11 +213,155 @@ export function Shell({
   const { locale, t, theme, toggleTheme, run } = useApp();
   const path = usePathname();
   const router = useRouter();
+  const prefix = `/${locale}`;
   const [drawer, setDrawer] = useState(false);
   const [modal, setModal] = useState("");
   const [results, setResults] = useState<Row[]>([]);
   const [query, setQuery] = useState("");
   const [searched, setSearched] = useState(false);
+  const [topbarMenuOpen, setTopbarMenuOpen] = useState(false);
+  const [sidebarMenuOpen, setSidebarMenuOpen] = useState(false);
+  const topbarMenuRef = useRef<HTMLDivElement>(null);
+  const sidebarMenuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const [localNotifications, setLocalNotifications] = useState(notifications);
+  const [browserPerm, setBrowserPerm] = useState<string>(
+    typeof window !== "undefined" && "Notification" in window
+      ? Notification.permission
+      : "default",
+  );
+  const notifiedIds = useRef<Set<string>>(
+    new Set(notifications.map((n) => String(n.id))),
+  );
+
+  useEffect(() => {
+    setLocalNotifications(notifications);
+  }, [notifications]);
+
+  useEffect(() => {
+    if (modal === "search") {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+    }
+  }, [modal]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        topbarMenuRef.current &&
+        !topbarMenuRef.current.contains(e.target as Node)
+      ) {
+        setTopbarMenuOpen(false);
+      }
+      if (
+        sidebarMenuRef.current &&
+        !sidebarMenuRef.current.contains(e.target as Node)
+      ) {
+        setSidebarMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleNotifClick = async (id: string) => {
+    setModal("");
+    setLocalNotifications((prev) =>
+      prev.map((n) => (String(n.id) === id ? { ...n, is_read: 1 } : n)),
+    );
+    await run(() => markNotificationRead(id), { quiet: true, refresh: false });
+  };
+
+  const handleMarkAllAsRead = async () => {
+    setLocalNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+    await run(readNotifications, { quiet: true, refresh: false });
+  };
+
+  const requestBrowserNotifications = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    setBrowserPerm(perm);
+    if (perm === "granted") {
+      try {
+        let subEndpoint = `browser-${user.id}-${navigator.userAgent.slice(0, 100)}`;
+        let subP256dh = "native-p256dh-key";
+        let subAuth = "native-auth-key";
+        let subExp: number | null = null;
+        if ("serviceWorker" in navigator && "PushManager" in window) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          const sub = await reg?.pushManager?.getSubscription();
+          if (sub) {
+            subEndpoint = sub.endpoint;
+            subExp = sub.expirationTime || null;
+            subP256dh = sub.getKey
+              ? btoa(
+                  String.fromCharCode(
+                    ...new Uint8Array(sub.getKey("p256dh") || []),
+                  ),
+                )
+              : subP256dh;
+            subAuth = sub.getKey
+              ? btoa(
+                  String.fromCharCode(
+                    ...new Uint8Array(sub.getKey("auth") || []),
+                  ),
+                )
+              : subAuth;
+          }
+        }
+        await run(
+          () =>
+            saveNotificationSubscription({
+              endpoint: subEndpoint,
+              expirationTime: subExp,
+              p256dh: subP256dh,
+              auth: subAuth,
+            }),
+          { quiet: true, refresh: false },
+        );
+      } catch {
+        // subscription record error ignored
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      for (const n of localNotifications) {
+        if (!n.is_read && !notifiedIds.current.has(String(n.id))) {
+          notifiedIds.current.add(String(n.id));
+          try {
+            const targetUrl = getNotificationRoute(
+              String(n.type),
+              String(n.detail),
+              user.role,
+              prefix,
+            );
+            const browserNotif = new Notification(t(String(n.type)), {
+              body: t(String(n.detail)),
+              icon: "/favicon.ico",
+            });
+            browserNotif.onclick = () => {
+              window.focus();
+              void handleNotifClick(String(n.id));
+              router.push(targetUrl);
+            };
+          } catch {
+            // notification error ignored
+          }
+        }
+      }
+    }
+  }, [localNotifications, prefix, router, t, user.role]);
+
   const navRef = useRef<HTMLElement>(null);
   const collapsed = useSyncExternalStore(
     subscribeSidebar,
@@ -180,7 +398,6 @@ export function Shell({
       clearTimeout(timer);
     };
   }, [query, modal]);
-  const prefix = `/${locale}`;
   const groups =
     user.role === "STUDENT"
       ? [
@@ -280,7 +497,7 @@ export function Shell({
       <aside className={`sidebar ${drawer ? "open" : ""}`}>
         <Link
           className="brand-link"
-          href={`${prefix}/${user.role === "STUDENT" ? "dashboard" : user.role === "PARENT" ? "parent" : "admin"}`}
+          href={user.is_demo ? `/${locale}/demo` : `/${locale}`}
         >
           <Brand />
         </Link>
@@ -313,38 +530,91 @@ export function Shell({
               <small>{t("sandboxNote")}</small>
             </span>
           </div>
-          <button
-            className="user-profile"
-            onClick={() => {
-              setModal("profile");
-              setDrawer(false);
-            }}
-          >
-            <span className="avatar">
-              {user.avatar ? (
-                <Image
-                  unoptimized
-                  src={user.avatar}
-                  alt=""
-                  width={36}
-                  height={36}
-                />
-              ) : (
-                <>
-                  {user.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join("")}
-                </>
-              )}
-            </span>
-            <span>
-              <strong>{user.name}</strong>
-              <small>{t(user.role.toLowerCase())}</small>
-            </span>
-            <FiSettings />
-          </button>
+          <div className="sidebar-profile-container" ref={sidebarMenuRef}>
+            {sidebarMenuOpen && (
+              <div className="profile-dropdown-menu sidebar-dropdown">
+                <div className="profile-dropdown-header">
+                  <strong>{user.name}</strong>
+                  <small>{user.email}</small>
+                </div>
+                <Link
+                  href={`${prefix}/settings`}
+                  className="profile-dropdown-item"
+                  onClick={() => {
+                    setSidebarMenuOpen(false);
+                    setDrawer(false);
+                  }}
+                >
+                  <FiSettings />
+                  <span>{t("settings")}</span>
+                </Link>
+                <Link
+                  href={`${prefix}/api-keys`}
+                  className="profile-dropdown-item"
+                  onClick={() => {
+                    setSidebarMenuOpen(false);
+                    setDrawer(false);
+                  }}
+                >
+                  <FiKey />
+                  <span>{t("api-keys")}</span>
+                </Link>
+                <Link
+                  href={`${prefix}/activity`}
+                  className="profile-dropdown-item"
+                  onClick={() => {
+                    setSidebarMenuOpen(false);
+                    setDrawer(false);
+                  }}
+                >
+                  <FiActivity />
+                  <span>{t("activity")}</span>
+                </Link>
+                <div className="profile-dropdown-divider" />
+                <button
+                  type="button"
+                  className="profile-dropdown-item danger"
+                  onClick={() =>
+                    void logout().then(() => router.push(`/${locale}/login`))
+                  }
+                >
+                  <FiLogOut />
+                  <span>{t("logout")}</span>
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              className="user-profile"
+              aria-expanded={sidebarMenuOpen}
+              onClick={() => setSidebarMenuOpen((prev) => !prev)}
+            >
+              <span className="avatar">
+                {user.avatar ? (
+                  <Image
+                    unoptimized
+                    src={user.avatar}
+                    alt=""
+                    width={36}
+                    height={36}
+                  />
+                ) : (
+                  <>
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join("")}
+                  </>
+                )}
+              </span>
+              <span>
+                <strong>{user.name}</strong>
+                <small>{t(user.role.toLowerCase())}</small>
+              </span>
+              <FiSettings />
+            </button>
+          </div>
         </div>
       </aside>
       <div className="main-column">
@@ -399,20 +669,84 @@ export function Shell({
             </button>
             <button
               className="icon-button notification-bell"
-              aria-label={`${t("notifications")}: ${notifications.filter((n) => !n.is_read).length} ${t("unread")}`}
+              aria-label={`${t("notifications")}: ${localNotifications.filter((n) => !n.is_read).length} ${t("unread")}`}
               onClick={() => {
                 setModal("notifications");
-                void run(readNotifications, { quiet: true });
               }}
             >
               <FiBell />
-              {notifications.some((n) => !n.is_read) && (
+              {localNotifications.some((n) => !n.is_read) && (
                 <span className="notification-count">
-                  {notifications.filter((n) => !n.is_read).length}
+                  {localNotifications.filter((n) => !n.is_read).length}
                 </span>
               )}
             </button>
-            <span className="avatar small">{user.name[0]}</span>
+            <div className="profile-menu-container" ref={topbarMenuRef}>
+              <button
+                type="button"
+                className="avatar-button"
+                aria-label={user.name}
+                aria-expanded={topbarMenuOpen}
+                onClick={() => setTopbarMenuOpen((prev) => !prev)}
+              >
+                <span className="avatar small">
+                  {user.avatar ? (
+                    <Image
+                      unoptimized
+                      src={user.avatar}
+                      alt=""
+                      width={28}
+                      height={28}
+                    />
+                  ) : (
+                    user.name[0]
+                  )}
+                </span>
+              </button>
+              {topbarMenuOpen && (
+                <div className="profile-dropdown-menu topbar-dropdown">
+                  <div className="profile-dropdown-header">
+                    <strong>{user.name}</strong>
+                    <small>{user.email}</small>
+                  </div>
+                  <Link
+                    href={`${prefix}/settings`}
+                    className="profile-dropdown-item"
+                    onClick={() => setTopbarMenuOpen(false)}
+                  >
+                    <FiSettings />
+                    <span>{t("settings")}</span>
+                  </Link>
+                  <Link
+                    href={`${prefix}/api-keys`}
+                    className="profile-dropdown-item"
+                    onClick={() => setTopbarMenuOpen(false)}
+                  >
+                    <FiKey />
+                    <span>{t("api-keys")}</span>
+                  </Link>
+                  <Link
+                    href={`${prefix}/activity`}
+                    className="profile-dropdown-item"
+                    onClick={() => setTopbarMenuOpen(false)}
+                  >
+                    <FiActivity />
+                    <span>{t("activity")}</span>
+                  </Link>
+                  <div className="profile-dropdown-divider" />
+                  <button
+                    type="button"
+                    className="profile-dropdown-item danger"
+                    onClick={() =>
+                      void logout().then(() => router.push(`/${locale}/login`))
+                    }
+                  >
+                    <FiLogOut />
+                    <span>{t("logout")}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main id="main" className="main-content">
@@ -446,29 +780,6 @@ export function Shell({
       >
         <FiPlus />
       </button>
-      {modal === "profile" && (
-        <Modal title={user.name} onClose={() => setModal("")}>
-          <div className="stack">
-            <Link
-              className="button secondary"
-              href={`${prefix}/settings`}
-              onClick={() => setModal("")}
-            >
-              {t("settings")}
-            </Link>
-            <button
-              className="button danger"
-              onClick={async () => {
-                const r = await run(logout, { quiet: true, refresh: false });
-                if (r !== undefined) router.push(`${prefix}/login`);
-              }}
-            >
-              <FiLogOut />
-              {t("logout")}
-            </button>
-          </div>
-        </Modal>
-      )}
       {modal === "search" && (
         <Modal title={t("search")} onClose={() => setModal("")}>
           <form
@@ -485,6 +796,8 @@ export function Shell({
             }}
           >
             <input
+              ref={searchInputRef}
+              autoFocus
               aria-label={t("search")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -515,15 +828,73 @@ export function Shell({
       )}
       {modal === "notifications" && (
         <Modal title={t("notifications")} onClose={() => setModal("")}>
+          <div className="notif-modal-header-actions">
+            {localNotifications.some((n) => !n.is_read) && (
+              <button
+                type="button"
+                className="button secondary small"
+                onClick={handleMarkAllAsRead}
+              >
+                <FiCheck />
+                <span>{t("markAllAsRead")}</span>
+              </button>
+            )}
+            {typeof window !== "undefined" && "Notification" in window && (
+              <button
+                type="button"
+                className={`button small ${browserPerm === "granted" ? "ghost" : "secondary"}`}
+                onClick={requestBrowserNotifications}
+                title={
+                  browserPerm === "granted"
+                    ? t("browserNotifsActive")
+                    : t("enableBrowserNotifs")
+                }
+              >
+                <FiBell />
+                <span>
+                  {browserPerm === "granted"
+                    ? t("browserNotifsActive")
+                    : t("enableBrowserNotifs")}
+                </span>
+              </button>
+            )}
+          </div>
           <div className="stack">
-            {notifications.length ? (
-              notifications.map((n) => (
-                <div className="notification-row" key={String(n.id)}>
-                  <FiBell />
-                  <div>
-                    <strong>{t(String(n.type))}</strong>
-                    <p>{t(String(n.detail))}</p>
-                  </div>
+            {localNotifications.length ? (
+              localNotifications.map((n) => (
+                <div
+                  className={`notification-row-wrapper ${!n.is_read ? "unread" : ""}`}
+                  key={String(n.id)}
+                >
+                  <Link
+                    className="notification-row clickable"
+                    href={getNotificationRoute(
+                      String(n.type),
+                      String(n.detail),
+                      user.role,
+                      prefix,
+                    )}
+                    onClick={() => void handleNotifClick(String(n.id))}
+                  >
+                    {!n.is_read && <span className="unread-dot" />}
+                    <FiBell />
+                    <div className="notification-content">
+                      <strong>{t(String(n.type))}</strong>
+                      <p>{t(String(n.detail))}</p>
+                    </div>
+                    <FiArrowUpRight className="notification-link-icon" />
+                  </Link>
+                  {!n.is_read && (
+                    <button
+                      type="button"
+                      className="icon-button mark-read-btn"
+                      title={t("markAsRead")}
+                      aria-label={t("markAsRead")}
+                      onClick={() => void handleNotifClick(String(n.id))}
+                    >
+                      <FiCheck />
+                    </button>
+                  )}
                 </div>
               ))
             ) : (

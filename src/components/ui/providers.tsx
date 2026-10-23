@@ -66,20 +66,27 @@ export function Providers({
 }) {
   const mode = useSyncExternalStore(
     subscribeTheme,
-    (): "light" | "dark" =>
-      localStorage.getItem("theme") === "dark" ? "dark" : "light",
+    (): "light" | "dark" => {
+      const stored = localStorage.getItem("theme");
+      if (stored === "dark" || stored === "light") return stored;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    },
     () => initialTheme || "light",
   );
   useEffect(() => {
-    const chosen =
-      initialTheme ||
-      (localStorage.getItem("theme") as "light" | "dark" | null) ||
-      (window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light");
+    const stored = localStorage.getItem("theme") as "light" | "dark" | null;
+    const system = window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    const chosen = stored || system;
     storeTheme(chosen);
-    if (userId && !initialTheme) void updatePreferences({ theme: chosen });
-  }, [initialTheme, userId]);
+    if (!stored) {
+      localStorage.setItem("theme", chosen);
+      if (userId) void updatePreferences({ theme: chosen });
+    }
+  }, [userId]);
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
