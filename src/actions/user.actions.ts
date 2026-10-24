@@ -42,6 +42,7 @@ export async function completeOnboarding(input: unknown) {
         (v) => Number(v.paid) + Number(v.scholarship) <= Number(v.tuition),
       )
       .parse(input);
+    requireCondition(u.is_demo || (Number(v.balance) === 0 && Number(v.paid) === 0), "LIVE_OPENING_BALANCE_ZERO");
     return atomic(async (db) => {
       const [fresh] = await rows<{ onboarded: number }>(
         "SELECT onboarded FROM users WHERE id=? FOR UPDATE",

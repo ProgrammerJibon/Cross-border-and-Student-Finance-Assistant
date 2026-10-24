@@ -133,7 +133,6 @@ export function LanguageSwitch() {
   const { locale, run, t } = useApp();
   const router = useRouter();
   const path = usePathname();
-  const isAgentPage = path.endsWith("/agent");
   return (
     <LanguagePicker
       locale={normalizeLocale(locale)}

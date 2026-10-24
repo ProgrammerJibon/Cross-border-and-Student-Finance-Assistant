@@ -13,6 +13,7 @@ export async function saveTuition(input: unknown) {
     const v = tuitionSchema
       .refine((v) => Number(v.paid) + Number(v.scholarship) <= Number(v.amount))
       .parse(input);
+    requireCondition(u.is_demo || Number(v.paid) === 0, "UNVERIFIED_TUITION_PAYMENT");
     return atomic(async (db) => {
       const key = v.id || randomUUID();
       if (v.id) {

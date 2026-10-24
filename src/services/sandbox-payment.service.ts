@@ -1,4 +1,5 @@
 import { getRiskPolicy } from "./financial-config.service";
+import { requireDemoFinance } from "@/lib/financial-environment";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { rows, write, atomic, type DB } from "@/lib/db";
 import { AppError, requireCondition } from "@/lib/errors";
@@ -237,6 +238,7 @@ export async function prepare(
     "VALIDATION_ERROR",
   );
   return atomic(async (db) => {
+    await requireDemoFinance(userId, db);
     await checkUsageLimit(userId, "TRANSFER_SIMULATIONS", db);
     const [q] = await rows<Quote>(
       "SELECT * FROM transfer_quotes WHERE id=? AND user_id=? AND expires_at>UTC_TIMESTAMP() FOR UPDATE",
@@ -313,6 +315,7 @@ export async function prepare(
   });
 }
 export async function approve(userId: string, transferId: string) {
+  await requireDemoFinance(userId);
   return atomic(async (db) => {
     await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [userId], db);
     const [t] = await rows<Transfer>(
@@ -357,6 +360,7 @@ export async function execute(
   transferId: string,
   token: string,
 ) {
+  await requireDemoFinance(userId);
   return atomic(async (db) => {
     await checkUsageLimit(userId, "TRANSFER_SIMULATIONS", db);
     const [t] = await rows<Transfer>(

@@ -122,7 +122,7 @@ test("agent → quote → risk → parent approval → atomic execution → rece
     [parent, "PARENT"],
   ]) {
     await db.execute(
-      "INSERT INTO users(id,name,email,password_hash,role,onboarded) VALUES (?,?,?,?,?,1)",
+      "INSERT INTO users(is_demo,id,name,email,password_hash,role,onboarded) VALUES (1,?,?,?,?,?,1)",
       [id, `Test ${role}`, `${id}@finbridge.demo`, hash, role],
     );
     await db.execute("INSERT INTO user_preferences(user_id) VALUES (?)", [id]);

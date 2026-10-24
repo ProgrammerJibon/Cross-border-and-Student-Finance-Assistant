@@ -100,13 +100,14 @@ export async function requirePlanPurchase(
   userId: string,
   plan: string,
   db?: DB,
+  allowDemo = false,
 ) {
   const [u] = await rows<{ role: string; is_demo: number }>(
     "SELECT role,is_demo FROM users WHERE id=?",
     [userId],
     db,
   );
-  requireCondition(u && !u.is_demo, "DEMO_PLAN_LOCKED");
+  requireCondition(u && (!u.is_demo || allowDemo), "DEMO_PLAN_LOCKED");
   requireCondition(
     u.role === "PARENT"
       ? familyPlans.includes(plan)

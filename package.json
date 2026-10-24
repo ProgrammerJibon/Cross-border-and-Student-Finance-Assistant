@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "rmdir .next /s /q && next build && xcopy \"public\" \".next\\standalone\\public\" /E /I /Y && xcopy \".next\\static\" \".next\\standalone\\.next\\static\" /E /I /Y && copy \".env.production\" \".next\\standalone\\.env.production\" /Y && copy \".env.production\" \".next\\standalone\\.env\" /Y && node scripts/patch-standalone.mjs && exit 0",
+    "build": "next build && node scripts/package-standalone.mjs",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,9 @@
     "test:agent:e2e": "playwright test --config playwright.agent.config.ts",
     "test:payments": "node --conditions=react-server --import tsx --test tests/payments.integration.ts",
     "billing:check": "node scripts/check-payment-providers.mjs",
-    "test:billing": "node --conditions=react-server --import tsx --test tests/billing.integration.ts"
+    "test:billing": "node --conditions=react-server --import tsx --test tests/billing.integration.ts",
+    "test:isolation": "node --conditions=react-server --import tsx --test tests/isolation.integration.ts",
+    "finance:reconcile": "node --conditions=react-server --import tsx scripts/reconcile.ts"
   },
   "keywords": [],
   "author": "",

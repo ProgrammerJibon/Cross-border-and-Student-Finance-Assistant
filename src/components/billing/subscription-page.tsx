@@ -1,5 +1,6 @@
 "use client";
 import { familyPlans } from "@/lib/plan-policy";
+import { simulateSubscription } from "@/actions/demo.actions";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FiCheck, FiLock } from "react-icons/fi";
@@ -118,6 +119,7 @@ export function SubscriptionPage({
                 : "studentUpgradeHelp",
         )}
       />
+      {!!data.user.is_demo && <Card><p>{t("demoEnvironmentNotice")}</p><div className="button-group">{availablePlans.map(p=><button key={String(p.id)} className="button secondary" onClick={()=>run(()=>simulateSubscription({id:crypto.randomUUID(),plan:p.id}),{refresh:true})}>{t("simulateSubscription")} · {t(String(p.name))}</button>)}</div></Card>}
       <Card>
         <div className="between">
           <div>

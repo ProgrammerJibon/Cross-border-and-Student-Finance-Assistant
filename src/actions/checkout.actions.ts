@@ -1,5 +1,6 @@
 "use server";
 import { gatewayOptions } from "@/services/gateway-config.service";
+import { checkoutEnvironment } from "@/lib/financial-environment";
 import { requirePlanPurchase } from "@/lib/entitlements";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
@@ -14,19 +15,20 @@ import {
 const selection = z.object({
   plan: z.string().min(1).max(64),
   cycle: z.enum(["monthly", "yearly"]),
-  environment: z.enum(["sandbox", "live"]).default("sandbox"),
+  environment: z.enum(["sandbox", "live"]).optional(),
   extraSeats: z.number().int().min(0).max(100).default(0),
 });
 export async function checkoutOptions(input: unknown) {
   return action(async () => {
     const u = await requireUser();
     requireCondition(["STUDENT", "PARENT"].includes(u.role));
-    const v = selection.parse(input);
+    const parsed = selection.parse(input);
+    const v = {...parsed, environment: await checkoutEnvironment(u.id, parsed.environment)};
     await requirePlanPurchase(u.id, v.plan);
     const [pending] = await rows<Checkout>("SELECT * FROM provider_checkouts WHERE user_id=? AND recurring=1 AND status='CREATED' AND plan_id=? AND cycle=? AND environment=? AND extra_seats=? LIMIT 1",[u.id,v.plan,v.cycle,v.environment,v.extraSeats]);
     return {
       ...(pending ? {amount:pending.amount,currency:pending.currency} : await planQuote(v.plan, v.cycle, undefined, v.extraSeats)),
-      ...(await gatewayOptions(v.environment)),
+      ...(await gatewayOptions(v.environment, {operation: "PLAN", customerCountry: u.country_code, currency: "USD"})),
     };
   });
 }
@@ -34,7 +36,7 @@ export async function startProviderCheckout(input: unknown) {
   return action(async () => {
     const u = await requireUser();
     requireCondition(["STUDENT", "PARENT"].includes(u.role));
-    const v = selection
+    const parsed = selection
       .extend({
         id: z.uuid(),
         provider: z.enum(["UNIONPAY", "STRIPE", "PAYPAL"]),
@@ -43,8 +45,9 @@ export async function startProviderCheckout(input: unknown) {
         currency: z.literal("USD"),
       })
       .parse(input);
+    const v = {...parsed, environment: await checkoutEnvironment(u.id, parsed.environment)};
     requireCondition(
-      (await gatewayOptions(v.environment)).providers[v.provider],
+      (await gatewayOptions(v.environment, {operation: "PLAN", customerCountry: u.country_code, currency: v.currency})).providers[v.provider],
       "CHECKOUT_NOT_CONFIGURED",
     );
     const checkout = await atomic(async (db) => {

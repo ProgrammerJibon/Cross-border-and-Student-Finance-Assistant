@@ -6,6 +6,10 @@ import { requireUser } from "@/lib/auth";
 import { createSession } from "@/lib/session";
 import { resetDemoData, checkAndAutoResetDemo } from "@/services/demo-reset.service";
 import type { User } from "@/types";
+import { simulateDemoSubscription } from "@/services/demo-subscription.service";
+export async function simulateSubscription(input: unknown) {
+  return action(async()=>simulateDemoSubscription((await requireUser()).id,input));
+}
 
 export async function demoProfiles() {
   return action(async () => {

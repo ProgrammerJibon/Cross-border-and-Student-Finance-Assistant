@@ -10,18 +10,21 @@ import { D, money } from "@/lib/money";
 import { audit } from "@/lib/audit";
 import { checkUsageLimit, incrementUsage } from "@/lib/plan-limits";
 import { checkCategoryLimit } from "@/services/parent-controls.service";
+import { financialIdentity } from "@/lib/financial-environment";
 async function add(
   userId: string,
   v: z.infer<typeof transactionSchema>,
   db: DB,
 ) {
+  const actor = await financialIdentity(userId, db);
   await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [userId], db);
-  const [a] = await rows<{ balance: string; currency: string; type: string }>(
-    "SELECT balance,currency,type FROM accounts WHERE id=? AND user_id=? AND archived=0 FOR UPDATE",
+  const [a] = await rows<{ balance: string; recorded_balance: string; currency: string; type: string }>(
+    "SELECT balance,recorded_balance,currency,type FROM accounts WHERE id=? AND user_id=? AND archived=0 FOR UPDATE",
     [v.account_id, userId],
     db,
   );
   requireCondition(a, "NOT_FOUND");
+  requireCondition(actor.is_demo || a.type === "CASH", "LIVE_RAIL_UNAVAILABLE");
   requireCondition(
     v.type !== "INCOME" || a.type === "CASH",
     "USE_PAYMENT_FLOW",
@@ -35,7 +38,7 @@ async function add(
       v.date,
       db,
     );
-  const next = D(a.balance).plus(
+  const next = D(actor.is_demo ? a.balance : a.recorded_balance).plus(
     v.type === "INCOME" ? v.amount : D(v.amount).neg(),
   );
   requireCondition(next.gte(0), "INSUFFICIENT_BALANCE");
@@ -57,7 +60,7 @@ async function add(
     db,
   );
   await write(
-    "UPDATE accounts SET balance=? WHERE id=?",
+    actor.is_demo ? "UPDATE accounts SET balance=? WHERE id=?" : "UPDATE accounts SET recorded_balance=? WHERE id=?",
     [money(next), v.account_id],
     db,
   );

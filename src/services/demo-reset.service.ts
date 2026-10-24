@@ -26,7 +26,7 @@ export async function checkAndAutoResetDemo(): Promise<boolean> {
       );
       return true;
     }
-  } catch (err) {
+  } catch {
     // Graceful error ignore on concurrent or offline access
   }
   return false;
@@ -42,6 +42,11 @@ if (typeof setInterval !== "undefined" && process.env.DEMO_MODE === "true") {
 export async function resetDemoData(actorId: string) {
   requireCondition(process.env.DEMO_MODE === "true","FORBIDDEN");
   return atomic(async db => {
+    if (actorId !== "system") {
+      const [actor] = await rows<{is_demo:number;role:string;status:string}>("SELECT is_demo,role,status FROM users WHERE id=?", [actorId], db);
+      requireCondition(actor && (actor.is_demo || actor.role === "ADMIN") && actor.status === "ACTIVE", "FORBIDDEN");
+    }
+    requireCondition(!(await rows("SELECT c.id FROM provider_checkouts c JOIN users u ON u.id=c.user_id WHERE u.is_demo=1 AND c.environment='live'", [], db)).length, "DEMO_RESET_UNSAFE");
     const users=await rows<{id:string;role:string}>("SELECT id,role FROM users WHERE is_demo=1 ORDER BY id FOR UPDATE",[],db);
     requireCondition(users.length>0,"NOT_FOUND");
     // A reset never modifies identities, API models, credentials or global settings.

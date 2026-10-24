@@ -1,5 +1,6 @@
 "use server";
 import { familySeats } from "@/lib/plan-policy";
+import { requireSameEnvironment } from "@/lib/financial-environment";
 import { effectiveSubscription, requireFamilyPlan, requireFamilyStudent } from "@/lib/entitlements";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { z } from "zod";
@@ -10,6 +11,20 @@ import { id, nonnegative, amount } from "@/lib/validation";
 import { audit, notify } from "@/lib/audit";
 import { checkUsageLimit, incrementUsage } from "@/lib/plan-limits";
 import { getRates, inCurrency } from "@/services/currency.service";
+export async function setStudentSharing(input: unknown) {
+  return action(async () => {
+    const u = await requireUser("STUDENT");
+    const v = z.object({id, visibility:z.object({balances:z.boolean(),categories:z.boolean(),descriptions:z.boolean(),tuition:z.boolean(),budgets:z.boolean()})}).parse(input);
+    return atomic(async db => {
+      const [link] = await rows<{parent_id:string}>("SELECT parent_id FROM family_links WHERE id=? AND student_id=? AND status='LINKED' FOR UPDATE",[v.id,u.id],db);
+      requireCondition(link,"NOT_FOUND");
+      await requireSameEnvironment(u.id,link.parent_id,db);
+      await write("UPDATE family_links SET visibility=? WHERE id=?",[JSON.stringify(v.visibility),v.id],db);
+      await audit(u.id,"STUDENT_SHARING_CONSENT","family_links",v.id,{visibility:v.visibility},db);
+      return null;
+    });
+  });
+}
 export async function inviteStudent(email: string) {
   return action(async () => {
     const u = await requireUser("PARENT");
@@ -82,6 +97,7 @@ export async function acceptInvitation(token: string) {
       );
       await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
       await requireFamilyPlan(invitation.parent_id, db);
+      await requireSameEnvironment(u.id, invitation.parent_id, db);
       const [seats] = await rows<{ n: number }>(
         "SELECT COUNT(*) n FROM family_links WHERE parent_id=? AND status='LINKED'",
         [invitation.parent_id],
@@ -158,6 +174,13 @@ export async function updateFamily(input: unknown) {
         db,
       );
       requireCondition(f, "NOT_FOUND");
+      await requireSameEnvironment(u.id, f.student_id, db);
+      // Parents may reduce visibility, but cannot grant themselves new access.
+      if (v.visibility) {
+        const [current] = await rows<{visibility: string}>("SELECT visibility FROM family_links WHERE id=?", [v.id], db);
+        const consent = JSON.parse(current.visibility) as Record<string, boolean>;
+        requireCondition(Object.entries(v.visibility).every(([key, value]) => !value || consent[key] === true), "STUDENT_CONSENT_REQUIRED");
+      }
       if (v.status) requireCondition(f.status !== "REVOKED", "INVALID_STATE");
       if (v.status === "LINKED")
         await requireFamilyStudent(f.student_id, v.id, db);

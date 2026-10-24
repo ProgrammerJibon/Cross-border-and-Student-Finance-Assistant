@@ -8,9 +8,11 @@ import { atomic, write } from "@/lib/db";
 import { compareQuotes } from "@/services/remittance.service";
 import { prepare, approve, execute } from "@/services/sandbox-payment.service";
 import { validCurrency } from "@/lib/catalog";
+import { requireDemoFinance } from "@/lib/financial-environment";
 export async function compareTransfers(input: unknown) {
   return action(async () => {
     const u = await requireUser("STUDENT");
+    await requireDemoFinance(u.id);
     const v = z
       .object({ amount, source: currency, target: currency })
       .refine((v) => v.source !== v.target)

@@ -47,7 +47,7 @@ export async function providerAgent(
   );
   const allowedTools = new Set(definitions.map((tool) => tool.name));
   const reusableResults = new Map<string, unknown>();
-  const instructions = `${agentInstructions} Respond in ${locale}.`;
+  const instructions = `${agentInstructions} Respond in ${locale}. Authenticated financial environment: ${config.financialEnvironment || "UNKNOWN"}. DEMO operations must say SIMULATED — NO REAL MONEY. LIVE wallet funding, transfers, FX and payouts are disabled until authorized settlement rails exist. Never suggest sandbox, manual references or recorded cash as a Live funding workaround. Historical LEGACY records are unverified, not real settlements. Use assessPaymentRisk for funding gaps, preserve the draft, and require a fresh confirmation after funding. Projections are not available money.`;
   const outputs: Record<string, unknown> = {};
   const steps: string[] = [];
   const toolCalls: { name: string; status: string }[] = [];

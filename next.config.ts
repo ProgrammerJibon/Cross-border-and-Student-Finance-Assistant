@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
     output: "standalone",
+    outputFileTracingExcludes: { "/*": ["./.env", "./.env.*"] },
     reactStrictMode: true,
     poweredByHeader: false,
     logging: {

@@ -6,7 +6,7 @@ import {
 } from "@/services/financial-config.service";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireLiveAdmin } from "@/lib/auth";
 import { atomic, rows, write } from "@/lib/db";
 import { action, requireCondition } from "@/lib/errors";
 import { id, nonnegative, currency } from "@/lib/validation";
@@ -28,12 +28,12 @@ export async function manageUser(input: unknown) {
     requireCondition(!v.role || u.role === "ADMIN", "FORBIDDEN");
     requireCondition(v.id !== u.id, "FORBIDDEN");
     await atomic(async (db) => {
-      const [target] = await rows<{ role: string }>(
-        "SELECT role FROM users WHERE id=? FOR UPDATE",
+      const [target] = await rows<{ role: string; is_demo: number }>(
+        "SELECT role,is_demo FROM users WHERE id=? FOR UPDATE",
         [v.id],
         db,
       );
-      requireCondition(target, "NOT_FOUND");
+      requireCondition(target && target.is_demo === u.is_demo, "NOT_FOUND");
       requireCondition(
         target.role !== "ADMIN" &&
           (target.role !== "MODERATOR" || u.role === "ADMIN"),
@@ -73,7 +73,7 @@ export async function manageUser(input: unknown) {
 }
 export async function savePlan(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("plans");
+    const u = await requireLiveAdmin("plans");
     const v = z
       .object({
         id,
@@ -143,8 +143,8 @@ export async function resolveReport(input: unknown) {
       .parse(input);
     await atomic(async (db) => {
       const [r] = await rows<{ user_id: string }>(
-        "SELECT user_id FROM reports WHERE id=? FOR UPDATE",
-        [v.id],
+        "SELECT r.user_id FROM reports r JOIN users owner ON owner.id=r.user_id WHERE r.id=? AND owner.is_demo=? FOR UPDATE",
+        [v.id, u.is_demo],
         db,
       );
       requireCondition(r, "NOT_FOUND");
@@ -168,7 +168,7 @@ export async function resolveReport(input: unknown) {
 }
 export async function saveProvider(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("finance");
+    const u = await requireLiveAdmin("finance");
     const v = z
       .object({
         id,
@@ -227,7 +227,7 @@ export async function saveProvider(input: unknown) {
 }
 export async function saveRate(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("finance");
+    const u = await requireLiveAdmin("finance");
     const v = z
       .object({
         currency,
@@ -260,7 +260,7 @@ export async function saveRate(input: unknown) {
 
 export async function saveFinancialPolicy(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("finance");
+    const u = await requireLiveAdmin("finance");
     const v = z
       .object({
         dailyRmb: nonnegative,
@@ -296,7 +296,7 @@ export async function saveFinancialPolicy(input: unknown) {
 }
 export async function saveCorridor(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("finance");
+    const u = await requireLiveAdmin("finance");
     const v = z
       .object({
         provider_id: z.string().min(1).max(64),
@@ -345,7 +345,7 @@ export async function saveCorridor(input: unknown) {
 }
 export async function saveCreditGuidance(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("finance");
+    const u = await requireLiveAdmin("finance");
     const v = z
       .object({
         country: z.string().regex(/^(default|[A-Z]{2})$/),

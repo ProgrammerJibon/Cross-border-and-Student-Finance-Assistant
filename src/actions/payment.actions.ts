@@ -1,7 +1,8 @@
 "use server";
 import { requireFamilyPlan } from "@/lib/entitlements";
+import { fundingAssistance } from "@/services/funding-assistance.service";
 import { z } from "zod";
-import { requireUser, requireAdmin } from "@/lib/auth";
+import { requireUser, requireAdmin, requireLiveAdmin } from "@/lib/auth";
 import { action, requireCondition } from "@/lib/errors";
 import { rows, write, atomic } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -20,6 +21,9 @@ import {
 } from "@/services/payment.service";
 export async function getPayments() {
   return action(async () => paymentWorkspace((await requireUser()).id));
+}
+export async function getFundingAssistance(requestId: string) {
+  return action(async () => fundingAssistance((await requireUser()).id, id.parse(requestId)));
 }
 export async function draftPayment(input: unknown, key: string) {
   return action(async () =>
@@ -108,7 +112,7 @@ export async function removeBeneficiary(beneficiaryId: string) {
 }
 export async function savePaymentMethod(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("payment-methods");
+    const u = await requireLiveAdmin("payment-methods");
     const v = z
       .object({
         code: paymentMethod,
@@ -148,7 +152,7 @@ export async function savePaymentMethod(input: unknown) {
 }
 export async function savePaymentPolicy(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("payment-methods");
+    const u = await requireLiveAdmin("payment-methods");
     const v = z
       .object({ nonBeneficiaryRmb: z.string().regex(/^\d{1,7}(\.\d{1,2})?$/) })
       .parse(input);

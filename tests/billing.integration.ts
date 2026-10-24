@@ -16,7 +16,7 @@ test("verified provider payment activates once under concurrent callbacks and re
   });
   try {
     await write(
-      "INSERT INTO users(id,name,email,password_hash,role) VALUES (?,? ,?,'fixture-no-login','STUDENT')",
+      "INSERT INTO users(is_demo,id,name,email,password_hash,role) VALUES (1,?,? ,?,'fixture-no-login','STUDENT')",
       [user, "Billing test", `${user}@example.test`],
     );
     await write(

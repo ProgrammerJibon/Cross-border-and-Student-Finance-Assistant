@@ -22,6 +22,11 @@ export async function requireAdmin(section: AdminSection) {
   if (!hasPermission(user, section)) throw new AppError("FORBIDDEN");
   return user;
 }
+export async function requireLiveAdmin(section: AdminSection) {
+  const user = await requireAdmin(section);
+  if (user.is_demo) throw new AppError("LIVE_ADMIN_REQUIRED");
+  return user;
+}
 export async function requireUser(role?: Role) {
   const u = await currentUser();
   if (!u) throw new AppError("UNAUTHORIZED");

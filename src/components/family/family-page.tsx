@@ -20,6 +20,7 @@ import {
   updateFamily,
   updateControls,
   decideApproval,
+  setStudentSharing,
 } from "@/actions/parent.actions";
 import { formatMoney } from "@/lib/money";
 import type { Workspace } from "@/types/workspace";
@@ -112,6 +113,9 @@ export function FamilyPage({ data, path }: { data: Workspace; path: string }) {
                   <p className="muted">
                     {parent ? t("student") : f.invite_email}
                   </p>
+                  {!parent && f.status === "LINKED" && <div className="visibility-list">
+                    {Object.entries(visibility).map(([key,value]) => <FormControlLabel key={key} label={t(key)} control={<Switch checked={value} onChange={(_,checked)=>run(()=>setStudentSharing({id:f.id,visibility:{...visibility,[key]:checked}}))}/>}/>)}
+                  </div>}
                   {parent ? (
                     <>
                       <h3>{t("visibility")}</h3>

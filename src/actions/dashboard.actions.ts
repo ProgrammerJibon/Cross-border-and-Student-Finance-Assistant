@@ -247,13 +247,13 @@ export async function getDashboardData(scope?: "agent") {
     if (admin && scope !== "agent") {
       const queries: Record<string, string> = {
         users:
-          "SELECT u.id,u.name,u.email,u.role,u.status,u.created_at,s.plan_id FROM users u LEFT JOIN subscriptions s ON s.user_id=u.id ORDER BY u.created_at DESC LIMIT 200",
-        reports: "SELECT * FROM reports ORDER BY created_at DESC LIMIT 200",
-        risk: "SELECT * FROM risk_assessments ORDER BY created_at DESC LIMIT 200",
-        runs: "SELECT * FROM agent_runs ORDER BY created_at DESC LIMIT 100",
+          "SELECT u.id,u.name,u.email,u.role,u.status,u.created_at,s.plan_id FROM users u LEFT JOIN subscriptions s ON s.user_id=u.id WHERE u.is_demo=? ORDER BY u.created_at DESC LIMIT 200",
+        reports: "SELECT * FROM reports WHERE user_id IN (SELECT id FROM users WHERE is_demo=?) ORDER BY created_at DESC LIMIT 200",
+        risk: "SELECT * FROM risk_assessments WHERE user_id IN (SELECT id FROM users WHERE is_demo=?) ORDER BY created_at DESC LIMIT 200",
+        runs: "SELECT * FROM agent_runs WHERE user_id IN (SELECT id FROM users WHERE is_demo=?) ORDER BY created_at DESC LIMIT 100",
         tools:
-          "SELECT * FROM agent_tool_calls ORDER BY created_at DESC LIMIT 200",
-        audit: "SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 200",
+          "SELECT * FROM agent_tool_calls WHERE run_id IN (SELECT r.id FROM agent_runs r JOIN users u ON u.id=r.user_id WHERE u.is_demo=?) ORDER BY created_at DESC LIMIT 200",
+        audit: "SELECT * FROM audit_logs WHERE actor_id IN (SELECT id FROM users WHERE is_demo=?) ORDER BY created_at DESC LIMIT 200",
         providers: "SELECT * FROM remittance_providers",
         corridors:
           "SELECT c.*,p.name provider FROM remittance_corridors c JOIN remittance_providers p ON p.id=c.provider_id ORDER BY p.name,c.source_currency,c.target_currency",
@@ -261,11 +261,11 @@ export async function getDashboardData(scope?: "agent") {
           "SELECT value FROM admin_settings WHERE name='creditGuidance'",
         rates: "SELECT * FROM fx_rates ORDER BY recorded_at DESC LIMIT 100",
         subscriptions:
-          "SELECT s.*,u.name,p.name plan FROM subscriptions s JOIN users u ON u.id=s.user_id JOIN plans p ON p.id=s.plan_id",
+          "SELECT s.*,u.name,p.name plan FROM subscriptions s JOIN users u ON u.id=s.user_id JOIN plans p ON p.id=s.plan_id WHERE u.is_demo=?",
         payments:
-          "SELECT * FROM demo_payments ORDER BY created_at DESC LIMIT 100",
+          "SELECT * FROM demo_payments WHERE user_id IN (SELECT id FROM users WHERE is_demo=?) ORDER BY created_at DESC LIMIT 100",
         transfers:
-          "SELECT t.id,t.status,q.total,q.source_currency,t.created_at FROM sandbox_transfers t JOIN transfer_quotes q ON q.id=t.quote_id ORDER BY t.created_at DESC LIMIT 200",
+          "SELECT t.id,t.status,q.total,q.source_currency,t.created_at FROM sandbox_transfers t JOIN transfer_quotes q ON q.id=t.quote_id WHERE t.user_id IN (SELECT id FROM users WHERE is_demo=?) ORDER BY t.created_at DESC LIMIT 200",
         plans:
           "SELECT p.*,pr.monthly,pr.yearly,pr.currency FROM plans p JOIN plan_prices pr ON pr.plan_id=p.id ORDER BY display_order",
         countries: "SELECT * FROM countries ORDER BY name",
@@ -289,7 +289,7 @@ export async function getDashboardData(scope?: "agent") {
                 payments: "subscriptions",
               } as Record<string, string>
             )[k] || k;
-          adminData[k] = hasPermission(user, section) ? await rows(q) : [];
+          adminData[k] = hasPermission(user, section) ? await rows(q, q.includes("is_demo=?") ? [user.is_demo] : []) : [];
         }),
       );
     }
@@ -470,8 +470,8 @@ export async function globalSearch(query: string) {
       matches.push(
         ...(
           await rows(
-            "SELECT id,name title FROM users WHERE name LIKE ? OR email LIKE ? LIMIT 8",
-            [q, q],
+            "SELECT id,name title FROM users WHERE is_demo=? AND (name LIKE ? OR email LIKE ?) LIMIT 8",
+            [u.is_demo, q, q],
           )
         ).map((r) => ({ ...r, kind: "admin/users" })),
       );

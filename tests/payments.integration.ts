@@ -69,7 +69,7 @@ test("shared financial state machine: approvals, settlement, concurrency, balanc
               ? "PARENT"
               : "STUDENT";
       await write(
-        "INSERT INTO users(id,name,email,password_hash,role,onboarded,admin_permissions) VALUES (?,?,?,'unused',?,1,?)",
+        "INSERT INTO users(is_demo,id,name,email,password_hash,role,onboarded,admin_permissions) VALUES (1,?,?,?,'unused',?,1,?)",
         [
           id,
           "Payment test",

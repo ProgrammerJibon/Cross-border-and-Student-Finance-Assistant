@@ -29,7 +29,7 @@ test("pricing, flags, form focus, demo tiers and notification test",async({page}
   await expect(page).toHaveURL(/dashboard/);
   await expect(page.locator('.sidebar a[href="/en/tuition"]')).toBeVisible();
 });
-test("real account has full Stripe option, sandbox details, live switch and hosted top-up",async({page})=>{
+test("Live checkout has no sandbox switch and unapproved money movement is disabled",async({page})=>{
   const db=await mysql.createConnection({host:process.env.DB_HOST,port:Number(process.env.DB_PORT),user:process.env.DB_USER,password:process.env.DB_PASSWORD,database:process.env.DB_NAME});
   const id=`ui-commerce-${randomUUID()}`,email=`${id}@example.test`,password="CommerceTest!2026";
   try{
@@ -40,17 +40,13 @@ test("real account has full Stripe option, sandbox details, live switch and host
     await page.goto("/en/login");await page.getByRole("textbox",{name:"Email address",exact:true}).fill(email);await page.getByRole("textbox",{name:"Password",exact:true}).fill(password);await page.getByRole("button",{name:"Sign in",exact:true}).click();
     await expect(page).toHaveURL(/dashboard/);
     await page.goto("/en/subscription/checkout?plan=student");
-    await expect(page.getByRole("radio").first()).toContainText("UnionPay");
-    await page.getByRole("radio",{name:/Stripe All eligible/}).click();
-    await expect(page.getByText("All eligible payment methods enabled in Stripe")).toBeVisible();
-    await expect(page.getByText("4242 4242 4242 4242")).toBeVisible();
-    await page.getByRole("button",{name:"Live",exact:true}).click();
-    await expect(page.getByText("Sandbox test details",{exact:true})).toHaveCount(0);
-    await page.goto("/en/payments");await page.getByRole("button",{name:"Add money",exact:true}).click();
-    await page.getByRole("combobox",{name:/Payment method/}).click();
-    await expect(page.getByRole("option",{name:"Stripe",exact:true})).toHaveCount(1);
-    await expect(page.getByRole("option",{name:/Alipay/})).toHaveCount(1);
-    await expect(page.getByRole("option",{name:/WeChat/})).toHaveCount(1);
+    await expect(page.getByRole("button",{name:"Sandbox",exact:true})).toHaveCount(0);
+    await expect(page.getByText("4242 4242 4242 4242")).toHaveCount(0);
+    await expect(page.getByRole("radio").first()).toBeDisabled();
+    await expect(page.getByRole("button",{name:"Continue to secure checkout",exact:true})).toBeDisabled();
+    await page.goto("/en/payments");
+    await expect(page.getByRole("button",{name:"Add money",exact:true})).toBeDisabled();
+    await expect(page.getByText(/Live funding, transfers and payouts are unavailable/)).toBeVisible();
   }finally{
     for(const table of ["notifications","generated_alerts","alerts","accounts","subscriptions","user_preferences"]) await db.execute(`DELETE FROM ${table} WHERE user_id=?`,[id]);
     await db.execute("DELETE FROM audit_logs WHERE actor_id=?",[id]);await db.execute("DELETE FROM auth_attempts WHERE identifier=?",[email]);await db.execute("DELETE FROM users WHERE id=?",[id]);await db.end();

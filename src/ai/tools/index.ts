@@ -260,6 +260,8 @@ export async function runTool(
         const ws = await paymentWorkspace(userId);
         output = {
           methods: ws.methods,
+          financialEnvironment: actor.is_demo ? "DEMO" : "LIVE",
+          liveMoneyMovementAvailable: false,
           confirmationRequired: true,
           instruction:
             "Use draftPayment with verified account IDs. Card details must be collected only by the secure payment form, never in chat. Drafts require the user confirmation button; external methods enter manual settlement.",
@@ -363,6 +365,7 @@ export async function runTool(
         break;
       case "compareRemittance":
       case "prepareTransfer": {
+        requireCondition(actor.is_demo, "LIVE_RAIL_UNAVAILABLE");
         const v = comparison.parse(args);
         output = {
           quotes: await compareQuotes(v.amount, v.source, v.target),

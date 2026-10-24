@@ -23,7 +23,7 @@ async function fixture(role = "STUDENT") {
   const id = `platform-${randomUUID().slice(0, 8)}`;
   const email = `${id}@finbridge.demo`;
   await db.execute(
-    "INSERT INTO users(id,name,email,password_hash,role,avatar,onboarded) VALUES (?,?,?,?,?,?,1)",
+    "INSERT INTO users(is_demo,id,name,email,password_hash,role,avatar,onboarded) VALUES (1,?,?,?,?,?,?,1)",
     [
       id,
       `Test ${role}`,

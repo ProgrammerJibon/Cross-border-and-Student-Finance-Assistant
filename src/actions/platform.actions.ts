@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { requireUser, requireAdmin } from "@/lib/auth";
+import { requireUser, requireLiveAdmin } from "@/lib/auth";
 import { rows, write, atomic } from "@/lib/db";
 import { action, requireCondition } from "@/lib/errors";
 import { audit } from "@/lib/audit";
@@ -25,7 +25,7 @@ const url = z
   .refine((v) => !v || /^https:\/\//.test(v));
 export async function saveCurrency(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("catalog");
+    const u = await requireLiveAdmin("catalog");
     const v = z
       .object({
         code: z.string().regex(/^[A-Z]{3}$/),
@@ -73,7 +73,7 @@ export async function saveCurrency(input: unknown) {
 }
 export async function saveCountry(input: unknown) {
   return action(async () => {
-    const u = await requireAdmin("catalog");
+    const u = await requireLiveAdmin("catalog");
     const v = z
       .object({
         code: z.string().regex(/^[A-Z]{2}$/),
@@ -108,7 +108,7 @@ export async function saveAiModel(input: unknown) {
         active: z.boolean(),
       })
       .parse(input);
-    if (v.shared) await requireAdmin("models");
+    if (v.shared) await requireLiveAdmin("models");
     let baseUrl: string | null = null;
     if (v.company === "COMPATIBLE") {
       try {
@@ -189,7 +189,7 @@ export async function deleteAiModel(id: string, shared = false) {
   return action(async () => {
     const u = await requireUser();
     z.string().max(64).parse(id);
-    if (shared) await requireAdmin("models");
+    if (shared) await requireLiveAdmin("models");
     await atomic(async (db) => {
       const r = await write(
         "DELETE FROM ai_models WHERE id=? AND owner_id <=> ?",
@@ -233,6 +233,7 @@ export async function selectAiModel(id: string) {
 export async function manageSavedCard(input: unknown) {
   return action(async () => {
     const u = await requireUser();
+    requireCondition(u.is_demo, "LIVE_RAIL_UNAVAILABLE");
     const v = z
       .object({
         id: z.string().max(64),
@@ -391,7 +392,7 @@ export async function testAiModel(id: string, shared = false) {
   return action(async () => {
     const u = await requireUser();
     z.string().min(1).max(64).parse(id);
-    if (shared) await requireAdmin("models");
+    if (shared) await requireLiveAdmin("models");
     let model:
       | {
           company: ProviderCompany;

@@ -307,7 +307,7 @@ export function OnboardingPage({ user }: { user: User }) {
           }}
         >
           <FormFields
-            fields={fields[step]}
+            fields={fields[step].filter(f => user.is_demo || !["paid", "balance"].includes(f.name))}
             values={values}
             setValues={setValues}
           />

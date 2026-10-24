@@ -15,7 +15,7 @@ export function SupportedPaymentMethods() {
         <strong>{t("supportedPaymentMethods")}</strong>
       </div>
       <ul aria-label={t("supportedPaymentMethods")}>
-        {["UnionPay", "Stripe", "Alipay", "WeChat Pay", "PayPal", "Visa", "Mastercard"].map((method) => (
+        {["Stripe", "PayPal"].map((method) => (
           <li key={method} className="payment-wordmark">
             <PaymentLogo method={method} />
             <span>{method}</span>

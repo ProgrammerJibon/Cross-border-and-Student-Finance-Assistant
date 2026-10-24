@@ -1,4 +1,5 @@
 import "server-only";
+import { requireCheckoutEnvironment, requireDemoFinance } from "@/lib/financial-environment";
 import { recurringReceipt, cancelUserRenewals } from "./recurring.service";
 import { settleProviderTopup } from "./payment.service";
 import { extraSeatPrice } from "@/lib/plan-policy";
@@ -53,6 +54,9 @@ export async function fulfillCheckout(id: string, owner?: string) {
     checkout && (!owner || checkout.user_id === owner),
     "NOT_FOUND",
   );
+  await requireCheckoutEnvironment(checkout);
+  if (checkout.purpose === "TOPUP") await requireDemoFinance(checkout.user_id);
+  requireCondition(!["CANCELLED", "FAILED", "REVERSED", "REFUNDED", "DISPUTED"].includes(checkout.status), "INVALID_STATE");
   if (checkout.status === "COMPLETED" && !checkout.recurring)
     return { status: "COMPLETED", reference: checkout.remote_id! };
   const recurring = checkout.recurring ? await recurringReceipt(checkout) : null;
@@ -70,6 +74,9 @@ export async function fulfillCheckout(id: string, owner?: string) {
       [id],
       db,
     );
+    await requireCheckoutEnvironment(locked, db);
+    requireCondition(locked.remote_id === checkout.remote_id && locked.amount === checkout.amount && locked.currency === checkout.currency && locked.environment === checkout.environment, "CHECKOUT_MISMATCH");
+    requireCondition(!["CANCELLED", "FAILED", "REVERSED", "REFUNDED", "DISPUTED"].includes(locked.status), "INVALID_STATE");
     if (locked.status === "COMPLETED" && !recurring) return;
     if (recurring) {
       const [seen] = await rows("SELECT receipt FROM provider_renewals WHERE provider=? AND environment=? AND receipt=?",[checkout.provider,checkout.environment || "sandbox",receipt],db);
@@ -82,7 +89,7 @@ export async function fulfillCheckout(id: string, owner?: string) {
       await write("UPDATE provider_checkouts SET status='COMPLETED',receipt=?,completed_at=UTC_TIMESTAMP() WHERE id=?",[receipt,id],db);
       return;
     }
-    await requirePlanPurchase(checkout.user_id, checkout.plan_id, db);
+    await requirePlanPurchase(checkout.user_id, checkout.plan_id, db, checkout.environment === "sandbox");
     requireCondition(
       locked.remote_id === checkout.remote_id,
       "CHECKOUT_MISMATCH",

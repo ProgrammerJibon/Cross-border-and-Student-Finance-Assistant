@@ -14,6 +14,7 @@ import {
 } from "../src/services/checkout-provider.service";
 
 const checkout: Checkout = {
+  environment: "sandbox",
   id: "9b810686-793d-476d-b9de-9b653807df4a",
   user_id: "student-a",
   plan_id: "student",
@@ -136,6 +137,7 @@ test("Stripe webhook signature rejects tampering and replayed timestamps", () =>
   );
 });
 test("provider requests use real sandbox endpoints, server amounts and idempotency", async (t) => {
+  process.env.PAYMENT_CONFIG_SOURCE = "environment";
   const previous = {
     paypal: process.env.PAYPAL_CLIENT_ID,
     secret: process.env.PAYPAL_CLIENT_SECRET,

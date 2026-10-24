@@ -15,6 +15,7 @@ export async function runAgent(
 ) {
   const config = await resolveModel(userId, modelId);
   if (!config) throw new AppError("AI_UNAVAILABLE");
+  const actor = await paymentActor(userId);
   return providerAgent(
     userId,
     runId,
@@ -22,7 +23,8 @@ export async function runAgent(
     locale,
     {
       ...config,
-      role: (await paymentActor(userId)).role as "STUDENT" | "PARENT" | "ADMIN",
+      role: actor.role as "STUDENT" | "PARENT" | "ADMIN",
+      financialEnvironment: actor.is_demo ? "DEMO" : "LIVE",
       onUsage: (usage) =>
         recordProviderUsage(userId, runId, modelId || null, usage),
     },

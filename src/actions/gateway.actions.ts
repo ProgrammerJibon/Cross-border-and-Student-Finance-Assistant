@@ -1,7 +1,7 @@
 "use server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
-import { action } from "@/lib/errors";
+import { action, requireCondition } from "@/lib/errors";
 import { atomic, rows, write } from "@/lib/db";
 import { encryptSecret, decryptSecret } from "@/lib/secrets";
 import { audit } from "@/lib/audit";
@@ -9,7 +9,8 @@ import { gatewayConfig, type GatewayConfig } from "@/services/gateway-config.ser
 const environmentSchema = z.enum(["sandbox", "live"]);
 export async function getGatewaySettings(environment: unknown) {
   return action(async () => {
-    await requireAdmin("payment-methods");
+    const u = await requireAdmin("payment-methods");
+    requireCondition(!u.is_demo || environment === "sandbox", "ENVIRONMENT_MISMATCH");
     const config = await gatewayConfig(environmentSchema.parse(environment));
     return Object.fromEntries(Object.entries(config).map(([k,v]) => [k, !!v]));
   });
@@ -19,6 +20,7 @@ export async function saveGatewaySettings(input: unknown) {
     const u = await requireAdmin("payment-methods");
     const secret = z.string().trim().max(2000).default("");
     const v = z.object({ environment: environmentSchema, paypalClientId: secret, paypalSecret: secret, paypalWebhookId: secret, stripeSecret: secret, stripeWebhookSecret: secret, buyerEmail: secret, buyerPassword: secret }).parse(input);
+    requireCondition(!u.is_demo, "LIVE_ADMIN_REQUIRED");
     await atomic(async db => {
       const [old] = await rows<{config_cipher: string}>("SELECT config_cipher FROM payment_gateway_config WHERE environment=? FOR UPDATE", [v.environment],db);
       const config: GatewayConfig = old ? JSON.parse(decryptSecret(old.config_cipher)) : {};

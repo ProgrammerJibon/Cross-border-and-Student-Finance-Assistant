@@ -1,4 +1,6 @@
 import { parseJson } from "@/lib/json";
+import { fundingAssistance } from "./funding-assistance.service";
+import { requireDemoFinance, requireSameEnvironment, requireCheckoutEnvironment } from "@/lib/financial-environment";
 import { getRiskPolicy } from "./financial-config.service";
 import "server-only";
 import type { Checkout } from "./checkout-provider.service";
@@ -46,6 +48,7 @@ type Request = {
 };
 type Actor = {
   id: string;
+  is_demo: number;
   role: string;
   status: string;
   admin_permissions: string | null;
@@ -62,7 +65,7 @@ type Control = {
 };
 export async function paymentActor(userId: string, db?: DB) {
   const [u] = await rows<Actor>(
-    "SELECT id,role,status,admin_permissions FROM users WHERE id=?",
+    "SELECT id,role,status,admin_permissions,is_demo FROM users WHERE id=?",
     [userId],
     db,
   );
@@ -82,6 +85,7 @@ async function lockRequest(requestId: string, db: DB) {
     db,
   );
   requireCondition(preview, "NOT_FOUND");
+  if (preview.recipient_user_id) await requireSameEnvironment(preview.user_id, preview.recipient_user_id, db);
   for (const id of [
     ...new Set(
       [preview.user_id, preview.recipient_user_id].filter(Boolean) as string[],
@@ -102,6 +106,7 @@ async function event(
   note: string,
   db: DB,
 ) {
+  await requireSameEnvironment(actor, r.user_id, db);
   await write(
     "UPDATE financial_requests SET status=?,note=? WHERE id=?",
     [status, note, r.id],
@@ -281,6 +286,7 @@ async function risk(r: Request, db: DB, held = false) {
   );
 }
 async function validateMethod(r: Request, db: DB) {
+  await requireDemoFinance(r.user_id, db);
   const [method] = await rows<{
     active: number;
     deposit_enabled: number;
@@ -307,7 +313,7 @@ export async function createPaymentDraft(
 ) {
   const v = requestSchema.parse(input);
   z.string().min(8).max(100).parse(key);
-  await customer(userId);
+  const owner = await customer(userId);
   requireCondition(
     !(v.method === "CARD" && v.kind !== "TOPUP") &&
       !(v.method === "INTERNAL" && v.kind !== "SEND"),
@@ -366,8 +372,8 @@ export async function createPaymentDraft(
     let receiver: { id: string; user_id: string } | undefined;
     if (v.method === "INTERNAL") {
       [receiver] = await rows<{ id: string; user_id: string }>(
-        "SELECT a.id,a.user_id FROM accounts a JOIN users u ON u.id=a.user_id WHERE u.email=? AND u.status='ACTIVE' AND u.role IN ('STUDENT','PARENT') AND a.currency=? AND a.archived=0 AND a.type<>'CASH' ORDER BY a.id LIMIT 1",
-        [destination.toLowerCase(), v.receive_currency],
+        "SELECT a.id,a.user_id FROM accounts a JOIN users u ON u.id=a.user_id WHERE u.email=? AND u.is_demo=? AND u.status='ACTIVE' AND u.role IN ('STUDENT','PARENT') AND a.currency=? AND a.archived=0 AND a.type<>'CASH' ORDER BY a.id LIMIT 1",
+        [destination.toLowerCase(), owner.is_demo, v.receive_currency],
         db,
       );
       requireCondition(
@@ -453,6 +459,8 @@ async function addTransaction(
   );
 }
 async function finish(r: Request, actor: string, note: string, db: DB) {
+  await requireDemoFinance(r.user_id, db);
+  if (r.recipient_user_id) await requireSameEnvironment(r.user_id, r.recipient_user_id, db);
   if (r.kind === "TOPUP") {
     const [a] = await rows(
       "SELECT id FROM accounts WHERE id=? AND user_id=? AND archived=0 FOR UPDATE",
@@ -547,6 +555,7 @@ async function reject(
   note: string,
   db: DB,
 ) {
+  await requireDemoFinance(r.user_id, db);
   if (r.held) {
     await write(
       "UPDATE accounts SET balance=balance+? WHERE id=?",
@@ -571,6 +580,7 @@ async function queueOrComplete(r: Request, actor: string, db: DB) {
     );
 }
 async function cardCharge(userId: string, input: unknown, db: DB) {
+  await requireDemoFinance(userId, db);
   const v = cardSchema.parse(input);
   const [saved] = v.savedCardId
     ? await rows<{ demo_token: string; expiry: string }>(
@@ -617,6 +627,7 @@ export async function confirmPayment(
     const r = await lockRequest(id, db);
     requireCondition(r.user_id === userId);
     await customer(userId, db);
+    await requireDemoFinance(userId, db);
     const [owner] = await rows<{is_demo:number}>("SELECT is_demo FROM users WHERE id=?",[userId],db);
     requireCondition(owner.is_demo || r.kind !== "TOPUP" || !["UNIONPAY","STRIPE","PAYPAL","ALIPAY","WECHAT","CARD"].includes(r.method), "USE_PROVIDER_CHECKOUT");
     if (r.status !== "DRAFT") return { id: r.id, status: r.status };
@@ -706,6 +717,8 @@ export async function decidePayment(
   return atomic(async (db) => {
     const r = await lockRequest(id, db);
     const u = await paymentActor(userId, db);
+    await requireSameEnvironment(userId, r.user_id, db);
+    await requireDemoFinance(r.user_id, db);
     requireCondition(
       u.role === "PARENT" && r.status === "WAITING_PARENT",
       "INVALID_STATE",
@@ -772,6 +785,8 @@ export async function settlePayment(
     const r = await lockRequest(id, db);
     const actor = await paymentActor(actorId, db);
     requireCondition(hasPermission(actor, "settlements"));
+    await requireSameEnvironment(actorId, r.user_id, db);
+    await requireDemoFinance(r.user_id, db);
     const [hosted] = await rows("SELECT id FROM provider_checkouts WHERE request_id=?",[id],db);
     requireCondition(!hosted,"USE_PROVIDER_CHECKOUT");
     requireCondition(canSettle(r.status, status), "INVALID_STATE");
@@ -814,6 +829,10 @@ export async function createBeneficiary(userId: string, input: unknown) {
   return atomic(async (db) => {
     await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [userId], db);
     await checkUsageLimit(userId, "BENEFICIARIES", db);
+    if (v.method === "INTERNAL") {
+      const [recipient] = await rows<{id: string}>("SELECT id FROM users WHERE email=? AND is_demo=? AND status='ACTIVE' AND role IN ('STUDENT','PARENT')", [v.destination.toLowerCase(), user.is_demo], db);
+      requireCondition(recipient && recipient.id !== userId, "RECIPIENT_UNAVAILABLE");
+    }
     const id = randomUUID();
     await write(
       "INSERT INTO beneficiaries(id,user_id,name,method,currency,country_code,destination,status) VALUES (?,?,?,?,?,?,?,?)",
@@ -860,6 +879,7 @@ export async function decideBeneficiary(
       db,
     );
     const parent = await paymentActor(parentId, db);
+    await requireSameEnvironment(parentId, b.user_id, db);
     requireCondition(parent.role === "PARENT" && fresh.status !== "REMOVED");
     const cs = await controls(b.user_id, db);
     requireCondition(cs.some((c) => c.parent_id === parentId));
@@ -911,12 +931,12 @@ export async function paymentWorkspace(userId: string) {
   const u = await paymentActor(userId);
   const admin = hasPermission(u, "settlements");
   const requests = await rows(
-    "SELECT r.*,u.name owner_name FROM financial_requests r JOIN users u ON u.id=r.user_id WHERE r.user_id=? OR r.recipient_user_id=? OR ?=1 OR (?='PARENT' AND EXISTS(SELECT 1 FROM family_links f WHERE f.student_id=r.user_id AND f.parent_id=? AND f.status='LINKED') AND r.status='WAITING_PARENT') ORDER BY r.created_at DESC LIMIT 100",
-    [userId, userId, admin, u.role, userId],
+    "SELECT r.*,u.name owner_name FROM financial_requests r JOIN users u ON u.id=r.user_id WHERE u.is_demo=? AND (r.user_id=? OR r.recipient_user_id=? OR ?=1 OR (?='PARENT' AND EXISTS(SELECT 1 FROM family_links f WHERE f.student_id=r.user_id AND f.parent_id=? AND f.status='LINKED') AND r.status='WAITING_PARENT')) ORDER BY r.created_at DESC LIMIT 100",
+    [u.is_demo, userId, userId, admin, u.role, userId],
   );
   const beneficiaries = await rows(
-    "SELECT b.*,u.name owner_name FROM beneficiaries b JOIN users u ON u.id=b.user_id WHERE b.status<>'REMOVED' AND (b.user_id=? OR (?='PARENT' AND EXISTS(SELECT 1 FROM family_links f WHERE f.student_id=b.user_id AND f.parent_id=? AND f.status='LINKED'))) ORDER BY b.created_at DESC",
-    [userId, u.role, userId],
+    "SELECT b.*,u.name owner_name FROM beneficiaries b JOIN users u ON u.id=b.user_id WHERE u.is_demo=? AND b.status<>'REMOVED' AND (b.user_id=? OR (?='PARENT' AND EXISTS(SELECT 1 FROM family_links f WHERE f.student_id=b.user_id AND f.parent_id=? AND f.status='LINKED'))) ORDER BY b.created_at DESC",
+    [u.is_demo, userId, u.role, userId],
   );
   const methods = await rows(
     "SELECT * FROM payment_methods WHERE active=1 OR ?=1 ORDER BY CASE code WHEN 'UNIONPAY' THEN 0 WHEN 'STRIPE' THEN 1 WHEN 'ALIPAY' THEN 2 WHEN 'WECHAT' THEN 3 WHEN 'PAYPAL' THEN 4 ELSE 5 END,name",
@@ -936,7 +956,7 @@ export async function paymentWorkspace(userId: string) {
   return {
     requests,
     beneficiaries,
-    methods,
+    methods: u.is_demo ? methods : [],
     events,
     policy: policy
       ? (JSON.parse(policy.value) as { nonBeneficiaryRmb: string })
@@ -968,6 +988,7 @@ export async function previewPaymentRisk(userId: string, requestId: string) {
       return {
         allowed: false,
         code: error.code,
+        ...(error.code === "INSUFFICIENT_BALANCE" ? {funding: await fundingAssistance(userId, requestId)} : {}),
         userConfirmationRequired: true,
       };
     throw error;
@@ -976,6 +997,8 @@ export async function previewPaymentRisk(userId: string, requestId: string) {
 
 // Only the verified provider fulfillment path can credit hosted top-ups.
 export async function settleProviderTopup(c: Checkout, receipt: string, db: DB) {
+  await requireCheckoutEnvironment(c, db);
+  await requireDemoFinance(c.user_id, db);
   const r=await lockRequest(c.request_id!,db);
   requireCondition(r.user_id === c.user_id && r.kind === "TOPUP" && r.method === c.provider,"CHECKOUT_MISMATCH");
   if(r.status === "COMPLETED") return;

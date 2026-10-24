@@ -34,7 +34,7 @@ test("agent database integration: ownership, history, workflows and usage", asyn
   try {
     for (const [i, id] of ids.entries()) {
       await write(
-        "INSERT INTO users(id,name,email,password_hash,role,onboarded) VALUES (?,?,?,'unused',?,1)",
+        "INSERT INTO users(is_demo,id,name,email,password_hash,role,onboarded) VALUES (1,?,?,?,'unused',?,1)",
         [
           id,
           "Agent fixture",
@@ -43,6 +43,7 @@ test("agent database integration: ownership, history, workflows and usage", asyn
         ],
       );
       await write("INSERT INTO user_preferences(user_id) VALUES (?)", [id]);
+      await write("INSERT INTO subscriptions(id,user_id,plan_id,starts_at,ends_at) VALUES (?,?,?,UTC_TIMESTAMP(),'2099-12-31')",[randomUUID(),id,i===1?"family":"student"]);
       await write(
         "INSERT INTO accounts(id,user_id,name,type,currency,balance) VALUES (?,?,'Private fixture wallet','WALLET','CNY',1000)",
         [`${id}-a`, id],

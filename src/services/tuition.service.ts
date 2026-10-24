@@ -19,7 +19,7 @@ export async function tuitionGap(userId: string, db?: DB) {
   if (!invoices.length) return null;
   const invoice = invoices[0];
   const accounts = await rows<{ balance: string; currency: string }>(
-    "SELECT balance,currency FROM accounts WHERE user_id=? AND archived=0",
+    "SELECT balance,currency FROM accounts WHERE user_id=? AND archived=0 AND type<>'CASH'",
     [userId],
     db,
   );
@@ -68,6 +68,8 @@ export async function tuitionGap(userId: string, db?: DB) {
         : "0",
       months,
     ),
+    availableFunds: money(available),
+    projectionNotice: "Income, scholarships and FX conversions are estimates, not settled funds.",
     daysRemaining: days,
     months,
     expectedIncome: money(D(profile?.monthly_income || 0).mul(months)),

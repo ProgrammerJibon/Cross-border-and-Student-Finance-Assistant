@@ -58,6 +58,7 @@ export type ProviderUsage = {
   observedAt: string;
 };
 export type ProviderConfig = {
+  financialEnvironment?: "DEMO" | "LIVE";
   role?: "STUDENT" | "PARENT" | "ADMIN";
   company: ProviderCompany;
   model: string;

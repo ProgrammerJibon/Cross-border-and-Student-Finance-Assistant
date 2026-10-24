@@ -1,7 +1,8 @@
 node_modules/
 .next/
 out/
-.env.production
+.env
+.env.*
 !.env.example
 *.tsbuildinfo
 test-results/

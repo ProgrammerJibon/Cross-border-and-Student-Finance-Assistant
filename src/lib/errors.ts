@@ -18,9 +18,7 @@ export async function action<T>(fn: () => Promise<T>): Promise<Result<T>> {
     if (!(e instanceof AppError) && !(e instanceof ZodError))
       console.error(
         "Server operation failed",
-        e instanceof Error
-          ? e.message.replace(/password[^,]*/gi, "[redacted]")
-          : "unknown",
+        e instanceof Error ? e.name : "unknown",
       );
     return { success: false, error: code, code };
   }

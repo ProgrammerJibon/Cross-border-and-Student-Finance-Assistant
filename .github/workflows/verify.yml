@@ -1,0 +1,41 @@
+name: Financial safety verification
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: fixture-only-password
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: fixture-only-password
+      SESSION_SECRET: ci-fixture-session-secret-at-least-32-characters
+      AI_KEY_ENCRYPTION_SECRET: ci-fixture-encryption-secret-at-least-32-characters
+      LIVE_PAYMENTS_ENABLED: "false"
+      PAYMENTS_SUSPENDED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: cp .env.example .env.local
+      - run: node scripts/create-test-database.mjs
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: node scripts/run-isolated-tests.mjs unit
+      - run: node scripts/run-isolated-tests.mjs integration
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/run-isolated-tests.mjs browser --config=playwright.isolation.config.ts

@@ -86,6 +86,8 @@ export function MoneyPage({ data }: { data: Workspace }) {
             <h2>
               {formatMoney(String(a.balance), String(a.currency), locale)}
             </h2>
+            {Number(a.legacy_unverified_balance || 0) !== 0 && <p>{t("legacyUnverified")}: {formatMoney(String(a.legacy_unverified_balance),String(a.currency),locale)}</p>}
+            {!data.user.is_demo && a.type === "CASH" && <p>{t("recordedCashNotice")}: {formatMoney(String(a.recorded_balance || 0),String(a.currency),locale)}</p>}
             <span className="muted">{t(String(a.type))}</span>
             <div className="account-actions">
               <Link

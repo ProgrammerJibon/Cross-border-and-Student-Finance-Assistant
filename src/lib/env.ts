@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 function loadEnv() {
   const isProd = process.env.NODE_ENV === "production";
   const envFiles = isProd
-    ? [".env.production.local", ".env.production", ".env.local", ".env"]
+    ? [".env.production.local", ".env.production"]
     : [".env.local", ".env.development.local", ".env.development", ".env", ".env.production"];
 
   for (const file of envFiles) {

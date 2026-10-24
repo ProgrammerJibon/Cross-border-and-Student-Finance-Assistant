@@ -5,6 +5,7 @@ import { z } from "zod";
 import { AppError, requireCondition } from "@/lib/errors";
 import { gatewayConfig, type Environment } from "./gateway-config.service";
 import { D } from "@/lib/money";
+import { requireDemoFinance } from "@/lib/financial-environment";
 
 export type Provider = "PAYPAL" | "UNIONPAY" | "STRIPE" | "ALIPAY" | "WECHAT";
 export type Checkout = {
@@ -41,17 +42,16 @@ async function request(url: string, init: RequestInit) {
     const response = await fetch(url, {
       ...init,
       cache: "no-store",
+      redirect: "error",
       signal: AbortSignal.timeout(20000),
     });
     if (!response.ok) {
-      const err = await response.text();
-      console.error(`Checkout API error ${response.status} from ${url}:`, err);
+      console.error("Checkout provider request rejected", { status: response.status });
       throw new AppError("CHECKOUT_PROVIDER_ERROR");
     }
     return response.status === 204 ? {} : await response.json();
   } catch (e) {
     if (e instanceof AppError) throw e;
-    console.error(`Checkout request network error to ${url}:`, e);
     // Never return provider payloads, credentials, or payment details to logs/UI.
     throw new AppError("CHECKOUT_PROVIDER_ERROR");
   }
@@ -112,6 +112,8 @@ export function checkoutOrigin() {
   return url.origin;
 }
 export async function createProviderCheckout(c: Checkout, locale: string) {
+  requireCondition(c.environment === "sandbox" || c.environment === "live", "ENVIRONMENT_MISMATCH");
+  if (c.purpose === "TOPUP") await requireDemoFinance(c.user_id);
   const environment = c.environment || "sandbox";
   const back = c.purpose === "TOPUP"
     ? `${checkoutOrigin()}/${locale}/payments?checkout=${c.id}`

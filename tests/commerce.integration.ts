@@ -10,7 +10,7 @@ test("hosted top-ups and recurring invoices settle once and cancellation reaches
   const original=process.env.STRIPE_SECRET_KEY;process.env.STRIPE_SECRET_KEY="sk_test_fixture";
   let invoice="in_first",until=Math.floor(Date.now()/1000)+30*86400,cancelled=false;
   try {
-    await write("INSERT INTO users(id,name,email,password_hash,role) VALUES (?, 'Commerce test',?,'fixture','STUDENT')",[user,`${user}@example.test`]);
+    await write("INSERT INTO users(is_demo,id,name,email,password_hash,role) VALUES (1,?, 'Commerce test',?,'fixture','STUDENT')",[user,`${user}@example.test`]);
     await write("INSERT INTO subscriptions(id,user_id,plan_id,starts_at,ends_at) VALUES (?,?,'student-free',UTC_TIMESTAMP(),'2099-12-31')",[randomUUID(),user]);
     await write("INSERT INTO accounts(id,user_id,name,type,currency,balance) VALUES (?,?,'Test','BANK','CNY',0)",[account,user]);
     await write("INSERT INTO financial_requests(id,user_id,account_id,kind,method,amount,currency,recipient,destination,receive_amount,receive_currency,fx_rate,status,idempotency_key) VALUES (?,?,?,'TOPUP','STRIPE',100,'CNY','','',100,'CNY',1,'PROCESSING',?)",[request,user,account,request]);

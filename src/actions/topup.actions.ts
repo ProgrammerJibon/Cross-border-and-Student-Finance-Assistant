@@ -8,8 +8,12 @@ import { gatewayOptions, type Environment } from "@/services/gateway-config.serv
 import { createProviderCheckout, type Checkout, type Provider } from "@/services/checkout-provider.service";
 import { getRates } from "@/services/currency.service";
 import { convert, D } from "@/lib/money";
-const inputSchema=z.object({requestId:z.string().max(64),environment:z.enum(["sandbox","live"]).default("sandbox")});
+import { checkoutEnvironment, requireDemoFinance } from "@/lib/financial-environment";
+const inputSchema=z.object({requestId:z.string().max(64),environment:z.enum(["sandbox","live"]).optional()});
 async function quote(userId:string,requestId:string,environment:Environment,db?:DB) {
+  await checkoutEnvironment(userId, environment, db);
+  // Merchant capture is not wallet settlement. No approved funding rail exists.
+  await requireDemoFinance(userId, db);
   const [r]=await rows<{amount:string;currency:string;method:Provider;status:string;kind:string}>("SELECT * FROM financial_requests WHERE id=? AND user_id=?",[requestId,userId],db);
   requireCondition(r && r.kind === "TOPUP" && ["UNIONPAY","STRIPE","PAYPAL","ALIPAY","WECHAT"].includes(r.method),"NOT_FOUND");
   const [old]=await rows<Checkout>("SELECT * FROM provider_checkouts WHERE request_id=?",[requestId],db);
@@ -27,14 +31,16 @@ async function quote(userId:string,requestId:string,environment:Environment,db?:
 export async function topupOptions(input:unknown) {
   return action(async()=>{
     const u=await requireUser();requireCondition(!u.is_demo,"DEMO_PLAN_LOCKED");
-    const v=inputSchema.parse(input);
+    const parsed=inputSchema.parse(input);
+    const v={...parsed, environment:await checkoutEnvironment(u.id, parsed.environment)};
     return {...await quote(u.id,v.requestId,v.environment),...await gatewayOptions(v.environment)};
   });
 }
 export async function startTopupCheckout(input:unknown) {
   return action(async()=>{
     const u=await requireUser();requireCondition(!u.is_demo,"DEMO_PLAN_LOCKED");
-    const v=inputSchema.extend({locale:z.enum(["en","bn-BD","zh-CN"]),amount:z.string(),currency:z.literal("USD")}).parse(input);
+    const parsed=inputSchema.extend({locale:z.enum(["en","bn-BD","zh-CN"]),amount:z.string(),currency:z.literal("USD")}).parse(input);
+    const v={...parsed, environment:await checkoutEnvironment(u.id, parsed.environment)};
     const c=await atomic(async db=>{
       await rows("SELECT id FROM users WHERE id=? FOR UPDATE",[u.id],db);
       const q=await quote(u.id,v.requestId,v.environment,db);

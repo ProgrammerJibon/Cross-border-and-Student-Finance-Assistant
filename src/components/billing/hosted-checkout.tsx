@@ -8,8 +8,8 @@ import { topupOptions, startTopupCheckout } from "@/actions/topup.actions";
 import { formatMoney } from "@/lib/money";
 import type { Row } from "@/types";
 type Provider = "UNIONPAY" | "STRIPE" | "PAYPAL" | "ALIPAY" | "WECHAT";
-type Quote = {amount:string;currency:string;environment:"sandbox"|"live";providers:Record<Provider,boolean>;testBuyer:{email:string;password:string}|null;provider?:Provider};
-export const providerNames: Record<Provider,string> = {UNIONPAY:"UnionPay", STRIPE:"Stripe",PAYPAL:"PayPal",ALIPAY:"Alipay",WECHAT:"WeChat Pay"};
+type Quote = {amount:string;currency:string;environment:"sandbox"|"live";providers:Record<Provider,boolean>;testBuyer:null;provider?:Provider};
+export const providerNames: Record<Provider,string> = {UNIONPAY:"Cards via Stripe (UnionPay where eligible)", STRIPE:"Stripe",PAYPAL:"PayPal",ALIPAY:"Alipay via Stripe",WECHAT:"WeChat Pay via Stripe"};
 
 export function PaymentVerification({id}:{id:string}) {
   const {t}=useApp(); const router=useRouter();
@@ -29,8 +29,8 @@ export function PaymentVerification({id}:{id:string}) {
 
 export function HostedCheckout({plan,requestId}:{plan?:Row;requestId?:string}) {
   const {t,locale}=useApp();
-  const [environment,setEnvironment]=useState<"sandbox"|"live">("sandbox");
-  const [provider,setProvider]=useState<Provider>("UNIONPAY");
+  const environment = "live" as const;
+  const [provider,setProvider]=useState<Provider>("STRIPE");
   const [extraSeats,setExtraSeats]=useState(0);
   const [quote,setQuote]=useState<Quote|null>(null);
   const [error,setError]=useState("");
@@ -76,14 +76,13 @@ export function HostedCheckout({plan,requestId}:{plan?:Row;requestId?:string}) {
     finally{setBusy(false)}
   };
   return <div className="hosted-checkout">
-    <div className="button-group" aria-label={t("paymentEnvironment")}>{(["sandbox","live"] as const).map(mode=><button type="button" key={mode} className={`button ${mode===environment?"":"secondary"}`} aria-pressed={mode===environment} disabled={busy || !!checkout} onClick={()=>{setEnvironment(mode);setQuote(null);setConsent(false)}}>{t(mode)}</button>)}</div>
+    <p role="status">{t("liveEnvironmentNotice")}</p>
     {planId==="family-pro" && <label>{t("additionalProStudents")}<input type="number" min={0} max={100} value={extraSeats} disabled={busy || !!checkout} onChange={e=>{setExtraSeats(Math.min(100,Math.max(0,Math.trunc(Number(e.target.value)||0))));setQuote(null);setConsent(false)}} /></label>}
-    {!requestId && <div className="provider-options" role="radiogroup" aria-label={t("choosePaymentMethod")}>{(["UNIONPAY","STRIPE","PAYPAL"] as const).map(p=><button type="button" role="radio" aria-checked={provider===p} key={p} className={`provider-option ${provider===p?"selected":""}`} disabled={busy || !!checkout} onClick={()=>{setProvider(p);setConsent(false)}}><PaymentLogo method={p}/><strong>{providerNames[p]}</strong><small>{t(p==="STRIPE"?"stripeFullCheckout":p==="UNIONPAY"?"unionpayViaStripe":"paypalCheckout")}</small></button>)}</div>}
+    {!requestId && <div className="provider-options" role="radiogroup" aria-label={t("choosePaymentMethod")}>{(["UNIONPAY","STRIPE","PAYPAL"] as const).map(p=><button type="button" role="radio" aria-checked={provider===p} key={p} className={`provider-option ${provider===p?"selected":""}`} disabled={busy || !!checkout || !quote?.providers[p]} onClick={()=>{setProvider(p);setConsent(false)}}><PaymentLogo method={p}/><strong>{providerNames[p]}</strong><small>{t(p==="STRIPE"?"stripeFullCheckout":p==="UNIONPAY"?"unionpayViaStripe":"paypalCheckout")}</small></button>)}</div>}
     {requestId && <h3><PaymentLogo method={provider}/> {providerNames[provider]}</h3>}
     {provider!=="PAYPAL" && <p className="muted"><PaymentLogo method="STRIPE"/> {t("poweredByStripe")}</p>}
     {quote && <p className="checkout-total"><strong>{formatMoney(quote.amount,quote.currency,locale)}</strong> {plan?t("perMonth"):""}<small>{t("providerCurrencyNote")}</small></p>}
-    {environment==="sandbox" && <div className="notification-guidance"><strong>{t("sandboxTestDetails")}</strong>{provider==="PAYPAL" ? quote?.testBuyer?.email && quote.testBuyer.password ? <><p>{t("email")}: {quote.testBuyer.email}</p><p>{t("password")}: <code>{quote.testBuyer.password}</code></p></> : <p>{t("paypalBuyerMissing")}</p> : provider==="ALIPAY" || provider==="WECHAT" ? <p>{t("walletSandboxHelp")}</p> : <><p>{t(provider==="STRIPE"?"stripeTestHelp":"unionpayTestHelp")}</p><p><code>{provider==="UNIONPAY"?"6200 0000 0000 0005":"4242 4242 4242 4242"}</code> · {t("testCardExpiry")}</p>{provider==="STRIPE" && <a className="text-link" href="https://docs.stripe.com/testing" target="_blank" rel="noreferrer">{t("stripeTestingGuide")}</a>}</>}</div>}
-    <p>{t(plan?"recurringConsentHelp":environment==="sandbox"?"sandboxTopupHelp":"liveTopupHelp")}</p>
+    <p>{t(plan?"recurringConsentHelp":"liveTopupHelp")}</p>
     {checkout ? <><a className="text-link" href={checkout.url} target="_blank" rel="noreferrer">{t("reopenCheckout")}</a><PaymentVerification id={checkout.id}/></> : <>
       <label className="checkbox-row"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>{t(plan?"authorizeSubscription":"authorizePayment")}</label>
       {quote && !quote.providers[provider] && <p role="status">{t("CHECKOUT_NOT_CONFIGURED")}</p>}

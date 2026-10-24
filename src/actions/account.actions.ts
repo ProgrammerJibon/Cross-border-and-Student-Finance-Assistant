@@ -53,13 +53,13 @@ export async function archiveAccount(accountId: string) {
     requireCondition(["STUDENT", "PARENT"].includes(u.role));
     id.parse(accountId);
     await atomic(async (db) => {
-      const [a] = await rows<{ balance: string }>(
-        "SELECT balance FROM accounts WHERE id=? AND user_id=? FOR UPDATE",
+      const [a] = await rows<{ balance: string; recorded_balance: string }>(
+        "SELECT balance,recorded_balance FROM accounts WHERE id=? AND user_id=? FOR UPDATE",
         [accountId, u.id],
         db,
       );
       requireCondition(a, "NOT_FOUND");
-      requireCondition(Number(a.balance) === 0, "ACCOUNT_NOT_EMPTY");
+      requireCondition(Number(a.balance) === 0 && Number(a.recorded_balance) === 0, "ACCOUNT_NOT_EMPTY");
       requireCondition(
         !(
           await rows(

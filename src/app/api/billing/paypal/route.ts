@@ -1,3 +1,4 @@
+import { processWebhook, recordProviderException } from "@/services/webhook-events.service";
 import { verifyPayPalWebhook, type Checkout } from "@/services/checkout-provider.service";
 import { fulfillCheckout } from "@/services/billing.service";
 import { rows, write } from "@/lib/db";
@@ -9,6 +10,8 @@ export async function POST(request: Request) {
   try { event=JSON.parse(body); await verifyPayPalWebhook(request.headers,event,environment); }
   catch { return new Response("Invalid signature",{status:400}); }
   try {
+    await processWebhook("PAYPAL", environment, event.id, event.event_type, body, async () => {
+      if (/refund|dispute|reversed|denied|failed/i.test(event.event_type)) await recordProviderException("PAYPAL", environment, event.id, event.event_type);
     const resource=event.resource || {};
     const remote=event.event_type === "PAYMENT.SALE.COMPLETED" ? resource.billing_agreement_id : resource.supplementary_data?.related_ids?.order_id || resource.id;
     if(typeof remote === "string") {
@@ -18,6 +21,7 @@ export async function POST(request: Request) {
         else if(["CHECKOUT.ORDER.APPROVED","PAYMENT.CAPTURE.COMPLETED","PAYMENT.SALE.COMPLETED"].includes(event.event_type)) await fulfillCheckout(c.id);
       }
     }
+    });
     return Response.json({received:true});
   } catch { return new Response("Not processed",{status:500}); }
 }

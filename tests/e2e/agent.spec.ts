@@ -35,7 +35,7 @@ async function fixture(page: Page, role = "STUDENT") {
   const db = await connect(),
     id = randomUUID();
   await db.execute(
-    "INSERT INTO users(id,name,email,password_hash,role,onboarded) VALUES (?,? ,?,'unused',?,1)",
+    "INSERT INTO users(is_demo,id,name,email,password_hash,role,onboarded) VALUES (1,?,? ,?,'unused',?,1)",
     [id, "Agent browser fixture", `${id}@agent.test`, role],
   );
   await db.execute("INSERT INTO user_preferences(user_id) VALUES (?)", [id]);

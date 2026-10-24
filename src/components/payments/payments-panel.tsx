@@ -16,6 +16,7 @@ import {
 import { useApp } from "@/components/ui/providers";
 import {
   getPayments,
+  getFundingAssistance,
   draftPayment,
   confirmPaymentRequest,
   cancelPaymentRequest,
@@ -73,6 +74,7 @@ export function PaymentsPanel({
   const [busy, setBusy] = useState(false);
   const [key, setKey] = useState("");
   const [saveCard, setSaveCard] = useState(false);
+  const [funding, setFunding] = useState<Extract<Awaited<ReturnType<typeof getFundingAssistance>>, {success:true}>["data"] | null>(null);
   const refresh = useCallback(async () => {
     const r = await getPayments();
     if (r.success) {
@@ -127,6 +129,10 @@ export function PaymentsPanel({
     setModal("draft");
   };
   const openConfirm = (r: Row) => {
+    setFunding(null);
+    if (r.kind !== "TOPUP" && r.status === "DRAFT") void getFundingAssistance(String(r.id)).then(result => {
+      if (result.success) setFunding(result.data);
+    });
     setSelected(r);
     setForm({
       cardholder: data.user.name,
@@ -180,11 +186,20 @@ export function PaymentsPanel({
         · {t("fee")}: 0
       </p>
       <p className="muted">{t("paymentReviewHelp")}</p>
+      {data.user.is_demo && <strong>{t("demoEnvironmentNotice")}</strong>}
     </>
   );
   return (
     <section className="payments-panel">
-      {methodAdmin && <GatewaySettings/>}
+      {search.get("resume") && <Card><p>{t("fundingResumeHelp")}</p>
+        <button className="button" onClick={() => openDraft("TOPUP")}>{t("addFunds")}</button>{" "}
+        <button className="button secondary" onClick={() => {
+          const original = ws.requests.find(r => r.id === search.get("resume") && r.user_id === data.user.id && r.status === "DRAFT");
+          if (original) openConfirm(original);
+        }}>{t("resumeTransfer")}</button>
+      </Card>}
+      {methodAdmin && !data.user.is_demo && <GatewaySettings/>}
+      {!data.user.is_demo && <p role="status">{t("LIVE_RAIL_UNAVAILABLE")}</p>}
       {search.get("checkout") && <Card><PaymentVerification id={search.get("checkout")!}/></Card>}
       {!compact && (
         <Heading title={t(mode)} subtitle={t("paymentWorkflowHelp")} />
@@ -195,7 +210,7 @@ export function PaymentsPanel({
             <button
               className="button"
               key={k}
-              disabled={!accounts.length}
+              disabled={!accounts.length || !data.user.is_demo}
               onClick={() => openDraft(k)}
             >
               {t(k)}
@@ -270,6 +285,7 @@ export function PaymentsPanel({
                       render: (r) => String(r.id).slice(0, 8),
                     },
                     { key: "owner_name", label: "name" },
+                    { key: "financial_environment", label: "paymentEnvironment" },
                     { key: "kind", render: (r) => t(String(r.kind)) },
                     { key: "method", label: "paymentMethod" },
                     {
@@ -601,6 +617,11 @@ export function PaymentsPanel({
       )}
       {modal === "confirm" && selected && (
         <Modal title={t("reviewConfirm")} onClose={() => !busy && setModal("")}>
+          {funding && Number(funding.shortfall) > 0 && <div role="status" className="notification-guidance">
+            <p>{t("available")}: {formatMoney(funding.available, funding.currency, locale)} · {t("requiredFunds")}: {formatMoney(funding.required, funding.currency, locale)} · {t("fundingShortfall")}: {formatMoney(funding.shortfall, funding.currency, locale)}</p>
+            <p>{t(funding.instruction)}</p>
+            {funding.canFund && <a className="button" href={`/${locale}/payments?account=${encodeURIComponent(funding.accountId)}&amount=${encodeURIComponent(funding.shortfall)}&resume=${encodeURIComponent(funding.requestId)}`}>{t("addFunds")}</a>}
+          </div>}
           {!data.user.is_demo && selected.kind === "TOPUP" && ["UNIONPAY","STRIPE","PAYPAL","ALIPAY","WECHAT"].includes(String(selected.method)) ? <>{displayRequest(selected)}<HostedCheckout requestId={String(selected.id)}/></> : <form
             onSubmit={(e) => {
               e.preventDefault();
