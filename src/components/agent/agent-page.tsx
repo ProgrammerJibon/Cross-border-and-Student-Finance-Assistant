@@ -20,6 +20,7 @@ import {
   getAgentConversation,
 } from "@/actions/agent.actions";
 import type { SavedTurn } from "@/ai/conversation";
+import { AgentStarter } from "./agent-starter";
 import { AgentUsagePanel } from "./usage-panel";
 import { parseJson } from "@/lib/json";
 import { PaymentsPanel } from "@/components/payments/payments-panel";
@@ -68,10 +69,26 @@ export function AgentPage({ data }: { data: Workspace }) {
   const [historyBusy, setHistoryBusy] = useState(false);
   const submitting = useRef(false);
   const [input, setInput] = useState("");
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  const draftPrompt = (prompt: string) => {
+    setInput(prompt.slice(0, 2000));
+    requestAnimationFrame(() => {
+      composerRef.current?.focus();
+      composerRef.current?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    });
+  };
   const [goal, setGoal] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(
+    null,
+  );
   const [budgetReview, setBudgetReview] = useState(false);
   const activeModels = data.aiModels.filter((m) => m.active);
   const defaultModel =
@@ -107,6 +124,16 @@ export function AgentPage({ data }: { data: Workspace }) {
     }, 1000);
     return () => clearInterval(timer);
   }, [rateLimitCountdown]);
+
+  useEffect(() => {
+    if (!busy) return;
+    const start = Date.now();
+    const timer = setInterval(
+      () => setElapsed(Math.floor((Date.now() - start) / 1000)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [busy]);
 
   const storageKey = `finbridge-agent-${data.user.id}`;
   const loadThread = useCallback(
@@ -164,8 +191,7 @@ export function AgentPage({ data }: { data: Workspace }) {
   }, [loadThread, storageKey]);
   const submit = async (prompt: string) => {
     const trimmed = prompt.trim();
-    if (!trimmed || submitting.current || historyBusy || modelBusy)
-      return;
+    if (!trimmed || submitting.current || historyBusy || modelBusy) return;
     submitting.current = true;
     setInput("");
     const previousRunId = selectedRunId || undefined;
@@ -174,6 +200,7 @@ export function AgentPage({ data }: { data: Workspace }) {
     setLiveSteps([]);
     setGoal(trimmed);
     setBusy(true);
+    setElapsed(0);
     setResult(null);
     setError("");
     try {
@@ -239,15 +266,10 @@ export function AgentPage({ data }: { data: Workspace }) {
           });
         }
         setError(r.code);
-        if (
-          [
-            "AI_RATE_LIMITED",
-            "AI_QUOTA_EXCEEDED",
-            "AI_OUTPUT_LIMIT",
-            "PLAN_LIMIT_REACHED",
-          ].includes(r.code)
-        ) {
+        if (r.code === "AI_RATE_LIMITED") {
           setRateLimitCountdown(60);
+        } else {
+          setRateLimitCountdown(null);
         }
       }
     } catch {
@@ -317,7 +339,10 @@ export function AgentPage({ data }: { data: Workspace }) {
   return (
     <>
       <div className="agent-page-layout">
-        <aside className="agent-history-sidebar" aria-label={t("previousConversations")}>
+        <aside
+          className="agent-history-sidebar"
+          aria-label={t("previousConversations")}
+        >
           <div className="agent-history-header">
             <div className="agent-history-header-top">
               <strong>{t("previousConversations")}</strong>
@@ -338,58 +363,81 @@ export function AgentPage({ data }: { data: Workspace }) {
               }}
             >
               <FiPlus />
-              <span>{t("newConversation")}</span>
+              <span>{t("startConversation")}</span>
             </button>
           </div>
+          <label className="agent-history-search">
+            <span className="sr-only">{t("searchConversations")}</span>
+            <input
+              type="search"
+              value={historyQuery}
+              onChange={(e) => setHistoryQuery(e.target.value)}
+              placeholder={t("searchConversations")}
+            />
+          </label>
           <div className="agent-history-list">
             {conversations.length === 0 ? (
               <div className="agent-history-empty">
                 <p className="muted">{t("emptyBody")}</p>
               </div>
             ) : (
-              conversations.map((r) => {
-                const isSelected = selectedRunId === String(r.id);
-                return (
-                  <button
-                    type="button"
-                    key={String(r.id)}
-                    className={`agent-history-item ${isSelected ? "active" : ""}`}
-                    disabled={busy || historyBusy}
-                    onClick={async () => {
-                      if (isSelected) return;
-                      setHistoryBusy(true);
-                      try {
-                        await loadThread(String(r.id));
-                      } catch {
-                        setError("AI_UNAVAILABLE");
-                      } finally {
-                        setHistoryBusy(false);
-                      }
-                    }}
-                  >
-                    <span className="history-item-icon">
-                      <FiMessageSquare />
-                    </span>
-                    <div className="history-item-content">
-                      <span className="history-item-goal" title={String(r.goal)}>
-                        {formatConversationTitle(String(r.goal))}
+              conversations
+                .filter((r) =>
+                  String(r.goal)
+                    .toLowerCase()
+                    .includes(historyQuery.toLowerCase()),
+                )
+                .map((r) => {
+                  const isSelected = selectedRunId === String(r.id);
+                  return (
+                    <button
+                      type="button"
+                      key={String(r.id)}
+                      className={`agent-history-item ${isSelected ? "active" : ""}`}
+                      disabled={busy || historyBusy}
+                      onClick={async () => {
+                        if (isSelected) return;
+                        setHistoryBusy(true);
+                        try {
+                          await loadThread(String(r.id));
+                        } catch {
+                          setError("AI_UNAVAILABLE");
+                        } finally {
+                          setHistoryBusy(false);
+                        }
+                      }}
+                    >
+                      <span className="history-item-icon">
+                        <FiMessageSquare />
                       </span>
-                      <span className="history-item-meta">
-                        {r.created_at
-                          ? new Date(r.created_at).toLocaleDateString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                            })
-                          : ""}
-                        {" · "}
-                        <span className={`status-pill ${String(r.status).toLowerCase()}`}>
-                          {t(String(r.status))}
+                      <div className="history-item-content">
+                        <span
+                          className="history-item-goal"
+                          title={String(r.goal)}
+                        >
+                          {formatConversationTitle(String(r.goal))}
                         </span>
-                      </span>
-                    </div>
-                  </button>
-                );
-              })
+                        <span className="history-item-meta">
+                          {r.created_at
+                            ? new Date(r.created_at).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )
+                            : ""}
+                          {" · "}
+                          <span
+                            className={`status-pill ${String(r.status).toLowerCase()}`}
+                          >
+                            {t(String(r.status))}
+                          </span>
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })
             )}
           </div>
           {hasMore && (
@@ -474,7 +522,7 @@ export function AgentPage({ data }: { data: Workspace }) {
               )}
             </select>
           </div>
-          <div className="agent-content">
+          <div className="agent-content" aria-busy={busy}>
             {activeModels.length === 0 && (
               <p className="muted">
                 {t("agentKeysHelp")}{" "}
@@ -530,7 +578,8 @@ export function AgentPage({ data }: { data: Workspace }) {
                       {["AI_RATE_LIMITED", "AI_QUOTA_EXCEEDED"].includes(error)
                         ? t("tokenLimitReached")
                         : error === "PLAN_LIMIT_REACHED"
-                          ? t("planLimitReached") || "Plan Message Limit Reached"
+                          ? t("planLimitReached") ||
+                            "Plan Message Limit Reached"
                           : t(error)}
                     </strong>
                     <p className="error-desc">{t(error)}</p>
@@ -550,6 +599,18 @@ export function AgentPage({ data }: { data: Workspace }) {
                     </span>
                   </div>
                 )}
+                {goal && (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    disabled={
+                      busy || !!rateLimitCountdown || historyBusy || modelBusy
+                    }
+                    onClick={() => draftPrompt(goal)}
+                  >
+                    {t("retryRequest")}
+                  </button>
+                )}
                 {["AI_RATE_LIMITED", "AI_QUOTA_EXCEEDED"].includes(error) &&
                   activeModels.length > 1 && (
                     <div className="error-action-hint">
@@ -565,6 +626,20 @@ export function AgentPage({ data }: { data: Workspace }) {
                 </span>
                 <h2>{t("agentIntro")}</h2>
                 <p>{t("agentSubtitle")}</p>
+                <button
+                  type="button"
+                  className="button secondary"
+                  aria-expanded={showBuilder}
+                  onClick={() => setShowBuilder((v) => !v)}
+                >
+                  {t("buildYourRequest")}
+                </button>
+                {showBuilder && (
+                  <AgentStarter
+                    onDraft={draftPrompt}
+                    disabled={busy || historyBusy || modelBusy}
+                  />
+                )}
                 <div className="prompt-grid">
                   {[
                     "promptTuition",
@@ -579,7 +654,8 @@ export function AgentPage({ data }: { data: Workspace }) {
                     <button
                       key={k}
                       className="prompt-card"
-                      onClick={() => submit(t(k))}
+                      disabled={busy || historyBusy || modelBusy}
+                      onClick={() => draftPrompt(t(k))}
                     >
                       {t(k)}
                       <FiArrowUpRight />
@@ -596,9 +672,14 @@ export function AgentPage({ data }: { data: Workspace }) {
                   </span>
                   <div className="agent-response">
                     {busy ? (
-                      <div className="working-state">
+                      <div
+                        className="working-state"
+                        role="status"
+                        aria-live="polite"
+                      >
                         <span className="pulse-dot" />
-                        {t("loading")}
+                        {t("loading")}{" "}
+                        <span className="agent-elapsed">{elapsed}s</span>
                         <p>
                           {liveSteps.length
                             ? t(liveSteps.at(-1)!.name)
@@ -740,8 +821,29 @@ export function AgentPage({ data }: { data: Workspace }) {
                 </div>
               </>
             )}
-            <div ref={messagesEndRef} style={{ height: "1px", width: "100%" }} />
+            <div
+              ref={messagesEndRef}
+              style={{ height: "1px", width: "100%" }}
+            />
           </div>
+          {result && !busy && (
+            <div
+              className="agent-followups"
+              aria-label={t("suggestedFollowups")}
+            >
+              {["followupExplain", "followupCompare", "followupNext"].map(
+                (k) => (
+                  <button
+                    type="button"
+                    key={k}
+                    onClick={() => draftPrompt(t(k))}
+                  >
+                    {t(k)}
+                  </button>
+                ),
+              )}
+            </div>
+          )}
           <form
             className="agent-composer"
             onSubmit={(e) => {
@@ -750,6 +852,8 @@ export function AgentPage({ data }: { data: Workspace }) {
             }}
           >
             <textarea
+              ref={composerRef}
+              aria-describedby="agent-composer-help"
               aria-label={t("agentInput")}
               placeholder={t("agentInput")}
               value={input}
@@ -757,7 +861,11 @@ export function AgentPage({ data }: { data: Workspace }) {
               maxLength={2000}
               rows={2}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                if (
+                  e.key === "Enter" &&
+                  !e.shiftKey &&
+                  !e.nativeEvent.isComposing
+                ) {
                   e.preventDefault();
                   void submit(input);
                 }
@@ -772,6 +880,10 @@ export function AgentPage({ data }: { data: Workspace }) {
               <FiArrowUp />
             </button>
           </form>
+          <div className="agent-composer-help" id="agent-composer-help">
+            <span>{t("composerKeyboardHint")}</span>
+            <span>{input.length}/2000</span>
+          </div>
           <div className="agent-footnote">
             <FiShield />
             {t("sandboxDisclosure")}

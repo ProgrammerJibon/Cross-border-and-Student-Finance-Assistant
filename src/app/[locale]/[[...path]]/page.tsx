@@ -1,4 +1,6 @@
+import { familyPlans, freePages } from "@/lib/plan-policy";
 import { redirect, notFound } from "next/navigation";
+import { effectiveSubscription } from "@/lib/entitlements";
 import { currentUser } from "@/lib/auth";
 import { canOpen } from "@/lib/permissions";
 import { getDashboardData, publicPlans } from "@/actions/dashboard.actions";
@@ -69,6 +71,11 @@ export default async function Page({
     redirect(
       `/${locale}/${["ADMIN", "MODERATOR"].includes(user.role) ? "admin" : user.role === "PARENT" ? "parent" : "dashboard"}`,
     );
+  if (user.role === "PARENT" && !["subscription", "subscription/checkout", "settings", "reports"].includes(path)) {
+    const [subscription] = await effectiveSubscription(user.id);
+    if (!familyPlans.includes(String(subscription?.plan_id))) redirect(`/${locale}/subscription`);
+  }
+  if (user.role === "STUDENT" && user.plan_id === "student-free" && !freePages.includes(path)) redirect(`/${locale}/subscription`);
   if (path === "onboarding") return <OnboardingPage user={user} />;
   const allowed = [
     "payments",

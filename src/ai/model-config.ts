@@ -1,10 +1,16 @@
 import "server-only";
+import { effectiveSubscription } from "@/lib/entitlements";
 import { rows } from "@/lib/db";
 import { requireCondition, AppError } from "@/lib/errors";
 import { decryptSecret } from "@/lib/secrets";
 import type { ProviderCompany } from "./provider-config";
 export async function resolveModel(userId: string, id?: string | null) {
   if (!id || id === "mock") return null;
+  const [subscription] = await effectiveSubscription(userId);
+  if (subscription?.plan_id === "student-free") {
+    const [owned] = await rows("SELECT id FROM ai_models WHERE id=? AND owner_id=?", [id,userId]);
+    requireCondition(owned, "SHARED_AI_REQUIRES_PRO");
+  }
   let model:
     | {
         id: string;

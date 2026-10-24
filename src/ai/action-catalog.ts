@@ -245,7 +245,7 @@ export const agentActionCatalog = {
       .strict(),
   },
   cancelSubscription: {
-    roles: customer,
+    roles: student,
     route: "subscription",
     description: "Cancel your subscription after explicit review.",
     schema: z.object({}).strict(),
@@ -478,6 +478,8 @@ export const agentActionCatalog = {
             TUITION_PLANS: z.number().int().min(0),
             CSV_IMPORTS: z.number().int().min(0),
             PARENT_LINKS: z.number().int().min(0),
+            BENEFICIARIES: z.number().int().min(0),
+            BUDGETS: z.number().int().min(0),
           })
           .strict(),
       })

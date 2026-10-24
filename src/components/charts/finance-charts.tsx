@@ -54,6 +54,10 @@ export function FinanceBar({
   series: { label: string; data: number[]; color?: string }[];
 }) {
   const { t, locale } = useApp();
+  const formatter = new Intl.NumberFormat(
+    locale,
+    currency ? { style: "currency", currency } : { maximumFractionDigits: 2 },
+  );
   return (
     <div
       className="chart"
@@ -74,13 +78,8 @@ export function FinanceBar({
         series={series.map((s, i) => ({
           ...s,
           label: t(s.label),
-          valueFormatter: currency
-            ? (v: number | null) =>
-                new Intl.NumberFormat(locale, {
-                  style: "currency",
-                  currency,
-                }).format(v || 0)
-            : undefined,
+          valueFormatter: (v: number | null) =>
+            v === null ? "—" : formatter.format(v),
           color: s.color || ["#8dc9b9", "#287b6a"][i],
         }))}
         borderRadius={5}

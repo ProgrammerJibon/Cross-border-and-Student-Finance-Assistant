@@ -96,8 +96,12 @@ export async function register(input: unknown) {
           db,
         );
       await write(
-        "INSERT INTO subscriptions(id,user_id,plan_id,starts_at,ends_at) SELECT ?,?,'trial',UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(),INTERVAL trial_days DAY) FROM plans WHERE id='trial'",
-        [randomUUID(), userId],
+        "INSERT INTO subscriptions(id,user_id,plan_id,starts_at,ends_at) SELECT ?,?,id,UTC_TIMESTAMP(),IF(id='student-free','2099-12-31',UTC_TIMESTAMP()) FROM plans WHERE id=?",
+        [
+          randomUUID(),
+          userId,
+          v.role === "STUDENT" ? "student-free" : "family",
+        ],
         db,
       );
       await audit(userId, "REGISTER", "users", userId, {}, db);
@@ -118,15 +122,28 @@ export async function logout() {
     return null;
   });
 }
-export async function demoLogin(role: Role) {
+export async function demoLogin(
+  role: Role,
+  studentPlan: "free" | "premium" = "free",
+) {
   return action(async () => {
     requireCondition(process.env.DEMO_MODE === "true", "FORBIDDEN");
     z.enum(["STUDENT", "PARENT", "ADMIN"]).parse(role);
+    z.enum(["free", "premium"]).parse(studentPlan);
     const [u] = await rows<User>(
-      "SELECT u.*,p.language FROM users u JOIN user_preferences p ON p.user_id=u.id WHERE u.role=? AND u.is_demo=1 AND u.status='ACTIVE' ORDER BY u.id LIMIT 1",
-      [role],
+      "SELECT u.*,p.language FROM users u JOIN user_preferences p ON p.user_id=u.id WHERE u.role=? AND u.is_demo=1 AND u.status='ACTIVE' AND (?<>'STUDENT' OR u.id=?) ORDER BY u.id LIMIT 1",
+      [
+        role,
+        role,
+        studentPlan === "free" ? "demo-student-free" : "demo-student",
+      ],
     );
     requireCondition(u, "NOT_FOUND");
+    if (role === "STUDENT")
+      await write(
+        "INSERT INTO subscriptions(id,user_id,plan_id,status,starts_at,ends_at) VALUES (?,?,?,'ACTIVE',UTC_TIMESTAMP(),'2099-12-31') ON DUPLICATE KEY UPDATE plan_id=VALUES(plan_id),status='ACTIVE',ends_at=VALUES(ends_at)",
+        [randomUUID(), u.id, studentPlan === "free" ? "student-free" : "student"],
+      );
     await createSession(u);
     await audit(u.id, "DEMO_LOGIN", "users", u.id);
     return { role: u.role, locale: u.language, onboarded: u.onboarded };

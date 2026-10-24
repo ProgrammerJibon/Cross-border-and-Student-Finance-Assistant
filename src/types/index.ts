@@ -21,6 +21,7 @@ export type User = {
   admin_permissions: string | null;
   country_code: string;
   ai_model_id: string | null;
+  plan_id?: string;
 };
 export type Feature =
   | "AGENT_MESSAGES"
@@ -28,4 +29,6 @@ export type Feature =
   | "CSV_IMPORTS"
   | "TRANSFER_SIMULATIONS"
   | "TUITION_PLANS"
-  | "PARENT_LINKS";
+  | "PARENT_LINKS"
+  | "BENEFICIARIES"
+  | "BUDGETS";

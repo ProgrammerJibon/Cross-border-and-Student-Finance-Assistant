@@ -9,7 +9,7 @@ await page.goto("http://127.0.0.1:3000/en/demo", {
   waitUntil: "networkidle",
   timeout: 180000,
 });
-await page.getByRole("button", { name: /Student Plan tuition/ }).click();
+await page.getByRole("button", { name: /Student Premium/ }).click();
 await page.waitForURL("**/dashboard", { timeout: 120000 });
 await page.waitForLoadState("networkidle");
 await page.screenshot({

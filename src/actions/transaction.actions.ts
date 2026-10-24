@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import Papa from "papaparse";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
+import { requireWorkspaceUser as requireUser } from "@/lib/auth";
 import { atomic, rows, write, type DB } from "@/lib/db";
 import { action, requireCondition } from "@/lib/errors";
 import { transactionSchema, id } from "@/lib/validation";

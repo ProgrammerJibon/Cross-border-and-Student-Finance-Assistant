@@ -211,6 +211,8 @@ export async function selectAiModel(id: string) {
   return action(async () => {
     const u = await requireUser();
     z.string().max(64).parse(id);
+    if (id && id !== "mock" && u.plan_id === "student-free")
+      requireCondition((await rows("SELECT id FROM ai_models WHERE id=? AND owner_id=?",[id,u.id])).length, "SHARED_AI_REQUIRES_PRO");
     if (id && id !== "mock")
       requireCondition(
         (

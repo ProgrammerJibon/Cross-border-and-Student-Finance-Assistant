@@ -1,7 +1,7 @@
 "use server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth";
+import { requireWorkspaceUser as requireUser } from "@/lib/auth";
 import { atomic, write, rows } from "@/lib/db";
 import { action, AppError, requireCondition } from "@/lib/errors";
 import { audit } from "@/lib/audit";

@@ -1,4 +1,5 @@
 "use server";
+import { checkUsageLimit } from "@/lib/plan-limits";
 import { randomUUID } from "node:crypto";
 import { requireUser } from "@/lib/auth";
 import { atomic, write, rows } from "@/lib/db";
@@ -13,6 +14,7 @@ export async function saveBudget(input: unknown) {
     const u = await requireUser("STUDENT");
     const v = budgetSchema.parse(input);
     return atomic(async (db) => {
+      await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
       const key = v.id || randomUUID();
       if (v.id) {
         const r = await write(
@@ -21,12 +23,15 @@ export async function saveBudget(input: unknown) {
           db,
         );
         requireCondition(r.affectedRows, "NOT_FOUND");
-      } else
+      } else {
+        const [existing] = await rows("SELECT id FROM budgets WHERE user_id=? AND category=? AND month=?", [u.id, v.category, v.month], db);
+        if (!existing) await checkUsageLimit(u.id, "BUDGETS", db, v.month);
         await write(
           "INSERT INTO budgets(id,user_id,category,amount,currency,month) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE amount=VALUES(amount)",
           [key, u.id, v.category, v.amount, v.currency, v.month],
           db,
         );
+      }
       await audit(u.id, "BUDGET_SAVED", "budgets", key, {}, db);
       return { id: key };
     });
@@ -61,7 +66,9 @@ export async function saveAgentBudget(runId: string) {
         .parse(raw);
       await validCurrency(proposal.currency, db);
       const month = new Date().toISOString().slice(0, 7);
-      for (const row of proposal.categories)
+      for (const row of proposal.categories) {
+        const [existing] = await rows("SELECT id FROM budgets WHERE user_id=? AND category=? AND month=?", [u.id, row.category, month], db);
+        if (!existing) await checkUsageLimit(u.id, "BUDGETS", db, month);
         await write(
           "INSERT INTO budgets(id,user_id,category,amount,currency,month) VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE amount=VALUES(amount)",
           [
@@ -74,6 +81,7 @@ export async function saveAgentBudget(runId: string) {
           ],
           db,
         );
+      }
       await audit(
         u.id,
         "AGENT_BUDGET_SAVED",

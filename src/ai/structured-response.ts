@@ -26,6 +26,7 @@ AVAILABLE FEATURES & ACTIONS (Prepare or run using tools):
 - Arithmetic Operations: calculate
 
 OPERATIONAL RULES:
+Use the smallest relevant data query. Answer greetings and navigation with respond directly. Reuse calculation and schema results already returned in this turn; do not repeat identical calls. Fetch fresh financial state when needed. If a tool reports a subscription or permission error, explain the restriction and link to subscription; never suggest bypassing it. Student Free has limited usage; Student Pro unlocks student features, an active Family plan includes Pro for up to five linked students, and demo accounts remain Free.
 Always finish by calling the 'respond' tool with JSON fields: type, intent, message, url, question, options. Keep messages concise and factual in plain text. Never claim an action is finalized without backend verification; mutations prepare human reviews for user confirmation. Do not expose internal chain-of-thought.`;
 export function collectAgentOutput(
   outputs: Record<string, unknown>,

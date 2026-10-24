@@ -93,6 +93,8 @@ export async function savePlan(input: unknown) {
           TUITION_PLANS: z.number().int().min(0),
           CSV_IMPORTS: z.number().int().min(0),
           PARENT_LINKS: z.number().int().min(0),
+          BENEFICIARIES: z.number().int().min(0),
+          BUDGETS: z.number().int().min(0),
         }),
       })
       .parse(input);

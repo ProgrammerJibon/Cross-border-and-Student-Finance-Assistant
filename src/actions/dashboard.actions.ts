@@ -1,4 +1,6 @@
 "use server";
+import { familyPlans, freePages } from "@/lib/plan-policy";
+import { effectiveSubscription } from "@/lib/entitlements";
 import { syncAutomaticAlerts } from "@/services/automatic-alerts.service";
 import {
   getRiskPolicy,
@@ -20,9 +22,13 @@ import { hasPermission } from "@/lib/admin-permissions";
 import { canOpen } from "@/lib/permissions";
 import { translator } from "@/lib/i18n";
 import { parseJson } from "@/lib/json";
+import { checkAndAutoResetDemo } from "@/services/demo-reset.service";
 export async function getDashboardData(scope?: "agent") {
   return action(async () => {
     const user = await requireUser();
+    if (user.is_demo) {
+      await checkAndAutoResetDemo();
+    }
     const student = user.role === "STUDENT",
       admin = user.role === "ADMIN" || user.role === "MODERATOR";
     try {
@@ -103,10 +109,7 @@ export async function getDashboardData(scope?: "agent") {
       rows(
         "SELECT p.*,pr.monthly,pr.yearly,pr.currency FROM plans p JOIN plan_prices pr ON pr.plan_id=p.id WHERE p.active=1 ORDER BY display_order",
       ),
-      rows(
-        "SELECT s.*,p.name,p.limits,pr.monthly,pr.currency FROM subscriptions s JOIN plans p ON p.id=s.plan_id JOIN plan_prices pr ON pr.plan_id=p.id WHERE s.user_id=?",
-        [user.id],
-      ),
+      effectiveSubscription(user.id),
       rows(
         "SELECT * FROM usage_counters WHERE user_id=? AND period=DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m')",
         [user.id],
@@ -193,11 +196,15 @@ export async function getDashboardData(scope?: "agent") {
       budgets: Row[];
       transactions: Row[];
     }[] = [];
-    if (user.role === "PARENT" && scope !== "agent")
+    if (
+      user.role === "PARENT" &&
+      familyPlans.includes(String(subscription[0]?.plan_id)) &&
+      scope !== "agent"
+    )
       for (const f of family.filter((f) => f.status === "LINKED")) {
         const v = parseJson<Record<string, boolean>>(f.visibility, {});
         parentStudents.push({
-          link: f,
+          link: {...f, student_plan: String((await effectiveSubscription(String(f.student_id)))[0]?.plan_id || "student-free")},
           accounts: v.balances
             ? await rows(
                 "SELECT currency,SUM(balance) balance FROM accounts WHERE user_id=? AND archived=0 GROUP BY currency",
@@ -230,7 +237,7 @@ export async function getDashboardData(scope?: "agent") {
         });
       }
     const approvals =
-      user.role === "PARENT"
+      user.role === "PARENT" && familyPlans.includes(String(subscription[0]?.plan_id))
         ? await rows(
             "SELECT p.*,t.recipient,t.purpose,t.status transfer_status,q.receive_amount,q.target_currency,q.total,q.source_currency,u.name student_name FROM parent_approvals p JOIN sandbox_transfers t ON t.id=p.transfer_id JOIN transfer_quotes q ON q.id=t.quote_id JOIN users u ON u.id=t.user_id WHERE p.parent_id=? AND EXISTS (SELECT 1 FROM family_links f WHERE f.parent_id=p.parent_id AND f.student_id=t.user_id AND f.status='LINKED') ORDER BY p.created_at DESC LIMIT 100",
             [user.id],
@@ -289,20 +296,21 @@ export async function getDashboardData(scope?: "agent") {
     let aiModels: import("@/types").Row[] = [];
     try {
       aiModels = await rows(
-        "SELECT id,owner_id,company,label,model,CASE WHEN owner_id=? THEN key_last_four ELSE NULL END key_last_four,active,base_url,input_price,output_price FROM ai_models WHERE owner_id=? OR (owner_id IS NULL AND (active=1 OR ?=1)) ORDER BY owner_id,label",
+        "SELECT id,owner_id,company,label,model,CASE WHEN owner_id=? THEN NULL ELSE NULL END key_last_four,active,base_url,input_price,output_price FROM ai_models WHERE owner_id=? OR (owner_id IS NULL AND (active=1 OR ?=1)) ORDER BY owner_id,label",
         [user.id, user.id, hasPermission(user, "models")],
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
       if (msg.includes("base_url")) {
         aiModels = await rows(
-          "SELECT id,owner_id,company,label,model,CASE WHEN owner_id=? THEN key_last_four ELSE NULL END key_last_four,active,NULL AS base_url,NULL AS input_price,NULL AS output_price FROM ai_models WHERE owner_id=? OR (owner_id IS NULL AND (active=1 OR ?=1)) ORDER BY owner_id,label",
+          "SELECT id,owner_id,company,label,model,CASE WHEN owner_id=? THEN NULL ELSE NULL END key_last_four,active,NULL AS base_url,NULL AS input_price,NULL AS output_price FROM ai_models WHERE owner_id=? OR (owner_id IS NULL AND (active=1 OR ?=1)) ORDER BY owner_id,label",
           [user.id, user.id, hasPermission(user, "models")],
         );
       } else {
         throw err;
       }
     }
+    if (user.role === "STUDENT" && user.plan_id === "student-free") aiModels = aiModels.filter(m => m.owner_id === user.id);
     const savedCards = await rows(
       "SELECT id,label,last_four,expiry FROM saved_cards WHERE user_id=? ORDER BY created_at DESC",
       [user.id],
@@ -337,7 +345,7 @@ export async function getDashboardData(scope?: "agent") {
       transfers,
       runs,
       audit,
-      plans,
+      plans: plans.map((p): Row => ({...p, monthly_rmb: inCurrency(String(p.monthly),String(p.currency),"CNY",rates), extra_rmb: inCurrency("256","BDT","CNY",rates)})),
       subscription,
       usage,
       payments,
@@ -371,11 +379,11 @@ export async function getDashboardData(scope?: "agent") {
   });
 }
 export async function publicPlans() {
-  return action(async () =>
-    rows(
-      "SELECT p.*,pr.monthly,pr.yearly,pr.currency FROM plans p JOIN plan_prices pr ON pr.plan_id=p.id WHERE p.active=1 ORDER BY display_order",
-    ),
-  );
+  return action(async () => {
+    const plans=await rows("SELECT p.*,pr.monthly,pr.yearly,pr.currency FROM plans p JOIN plan_prices pr ON pr.plan_id=p.id WHERE p.active=1 ORDER BY display_order");
+    const rates=await getRates();
+    return plans.map((p): Row => ({...p,monthly_rmb:inCurrency(String(p.monthly),String(p.currency),"CNY",rates),extra_rmb:inCurrency("256","BDT","CNY",rates)}));
+  });
 }
 export async function globalSearch(query: string) {
   return action(async () => {
@@ -422,6 +430,7 @@ export async function globalSearch(query: string) {
       .filter(
         (path) =>
           canOpen(u.role, path, u.admin_permissions) &&
+          (u.role !== "STUDENT" || u.plan_id !== "student-free" || freePages.includes(path)) &&
           `${path} ${t(path.split("/").at(-1)!)}`
             .toLowerCase()
             .includes(term.toLowerCase()),

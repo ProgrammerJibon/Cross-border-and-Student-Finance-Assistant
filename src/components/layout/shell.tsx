@@ -1,4 +1,8 @@
 "use client";
+import { freePages } from "@/lib/plan-policy";
+import { FooterCredits } from "./footer-credits";
+import { LanguagePicker } from "@/components/ui/language-picker";
+import { normalizeLocale } from "@/lib/i18n";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -47,13 +51,29 @@ import { globalSearch } from "@/actions/dashboard.actions";
 import {
   readNotifications,
   markNotificationRead,
-  saveNotificationSubscription,
+  resubscribeDevice,
 } from "@/actions/alert.actions";
+import {
+  resubscribeNotifications,
+  showBrowserNotification,
+} from "@/components/ui/browser-notifications";
 import { hasPermission } from "@/lib/admin-permissions";
 const subscribeSidebar = (cb: () => void) => {
   window.addEventListener("sidebar-state", cb);
   return () => window.removeEventListener("sidebar-state", cb);
 };
+const subscribePermission = (callback: () => void) => {
+  window.addEventListener("focus", callback);
+  window.addEventListener("notification-permission", callback);
+  document.addEventListener("visibilitychange", callback);
+  return () => {
+    window.removeEventListener("focus", callback);
+    window.removeEventListener("notification-permission", callback);
+    document.removeEventListener("visibilitychange", callback);
+  };
+};
+const getPermission = () =>
+  "Notification" in window ? Notification.permission : "unsupported";
 export function ThemeToggle() {
   const { theme, t, toggleTheme } = useApp();
   return (
@@ -113,38 +133,29 @@ export function LanguageSwitch() {
   const { locale, run, t } = useApp();
   const router = useRouter();
   const path = usePathname();
-  const flags: Record<string, string> = {
-    en: "🇺🇸",
-    "zh-CN": "🇨🇳",
-    "bn-BD": "🇧🇩",
-  };
+  const isAgentPage = path.endsWith("/agent");
   return (
-    <div className="language-switch-wrapper">
-      <span className="language-flag" aria-hidden="true">
-        {flags[locale] || "🌐"}
-      </span>
-      <select
-        className="language-select"
-        aria-label={t("language")}
-        value={locale}
-        onChange={async (e) => {
-          const next = e.target.value;
-          localStorage.setItem("language", next);
-          document.cookie = `language=${next};path=/;SameSite=Lax;max-age=31536000`;
-          const ok = await run(() => updatePreferences({ language: next }), {
-            quiet: true,
-            refresh: false,
-          });
-          if (ok) router.replace(path.replace(`/${locale}`, `/${next}`));
-        }}
-      >
-        <option value="en">🇺🇸 EN</option>
-        <option value="zh-CN">🇨🇳 中文</option>
-        <option value="bn-BD">🇧🇩 বাংলা</option>
-      </select>
-    </div>
+    <LanguagePicker
+      locale={normalizeLocale(locale)}
+      label={t("language")}
+      onChange={async (next) => {
+        const ok = await run(() => updatePreferences({ language: next }), {
+          quiet: true,
+          refresh: false,
+        });
+        if (ok) {
+          try {
+            localStorage.setItem("language", next);
+          } catch {
+            /* The language cookie remains available. */
+          }
+          router.replace(path.replace(`/${locale}`, `/${next}`));
+        }
+      }}
+    />
   );
 }
+
 function getNotificationRoute(
   type: string,
   detail: string,
@@ -212,6 +223,7 @@ export function Shell({
 }) {
   const { locale, t, theme, toggleTheme, run } = useApp();
   const path = usePathname();
+  const isAgentPage = path.endsWith("/agent");
   const router = useRouter();
   const prefix = `/${locale}`;
   const [drawer, setDrawer] = useState(false);
@@ -226,19 +238,20 @@ export function Shell({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [localNotifications, setLocalNotifications] = useState(notifications);
-  const [browserPerm, setBrowserPerm] = useState<string>(
-    typeof window !== "undefined" && "Notification" in window
-      ? Notification.permission
-      : "default",
-  );
-  const notifiedIds = useRef<Set<string>>(
-    new Set(notifications.map((n) => String(n.id))),
-  );
-
-  useEffect(() => {
+  const [previousNotifications, setPreviousNotifications] =
+    useState(notifications);
+  if (previousNotifications !== notifications) {
+    setPreviousNotifications(notifications);
     setLocalNotifications(notifications);
-  }, [notifications]);
-
+  }
+  const browserPerm = useSyncExternalStore(
+    subscribePermission,
+    getPermission,
+    () => "default",
+  );
+  const [notificationStatus, setNotificationStatus] = useState("");
+  const [notificationBusy, setNotificationBusy] = useState(false);
+  const notifiedIds = useRef(new Set(notifications.map((n) => String(n.id))));
   useEffect(() => {
     if (modal === "search") {
       setTimeout(() => {
@@ -271,96 +284,106 @@ export function Shell({
     setLocalNotifications((prev) =>
       prev.map((n) => (String(n.id) === id ? { ...n, is_read: 1 } : n)),
     );
-    await run(() => markNotificationRead(id), { quiet: true, refresh: false });
+    const result = await run(() => markNotificationRead(id), {
+      quiet: true,
+      refresh: false,
+    });
+    if (result === undefined) router.refresh();
   };
-
   const handleMarkAllAsRead = async () => {
     setLocalNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
-    await run(readNotifications, { quiet: true, refresh: false });
+    const result = await run(readNotifications, {
+      quiet: true,
+      refresh: false,
+    });
+    if (result === undefined) router.refresh();
   };
-
+  const testBrowserNotification = async () => {
+    setNotificationBusy(true);
+    try {
+      if (!("Notification" in window)) throw new Error("notificationUnsupported");
+      if (Notification.permission !== "granted") throw new Error("notificationDenied");
+      await showBrowserNotification(t("notifications"), t("notificationTestBody"), `finbridge-test-${Date.now()}`, path);
+      setNotificationStatus("notificationTestSent");
+    } catch (error) {
+      setNotificationStatus(error instanceof Error && error.message.startsWith("notification") ? error.message : "notificationFailed");
+    } finally { setNotificationBusy(false); }
+  };
   const requestBrowserNotifications = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      return;
-    }
-    const perm = await Notification.requestPermission();
-    setBrowserPerm(perm);
-    if (perm === "granted") {
+    setNotificationBusy(true);
+    try {
+      const device = await resubscribeNotifications();
+      const saved = await resubscribeDevice(device);
+      if (!saved.success) throw new Error("notificationSaveFailed");
+      router.refresh();
+      setNotificationStatus("notificationResubscribed");
       try {
-        let subEndpoint = `browser-${user.id}-${navigator.userAgent.slice(0, 100)}`;
-        let subP256dh = "native-p256dh-key";
-        let subAuth = "native-auth-key";
-        let subExp: number | null = null;
-        if ("serviceWorker" in navigator && "PushManager" in window) {
-          const reg = await navigator.serviceWorker.getRegistration();
-          const sub = await reg?.pushManager?.getSubscription();
-          if (sub) {
-            subEndpoint = sub.endpoint;
-            subExp = sub.expirationTime || null;
-            subP256dh = sub.getKey
-              ? btoa(
-                  String.fromCharCode(
-                    ...new Uint8Array(sub.getKey("p256dh") || []),
-                  ),
-                )
-              : subP256dh;
-            subAuth = sub.getKey
-              ? btoa(
-                  String.fromCharCode(
-                    ...new Uint8Array(sub.getKey("auth") || []),
-                  ),
-                )
-              : subAuth;
-          }
-        }
-        await run(
-          () =>
-            saveNotificationSubscription({
-              endpoint: subEndpoint,
-              expirationTime: subExp,
-              p256dh: subP256dh,
-              auth: subAuth,
-            }),
-          { quiet: true, refresh: false },
+        await showBrowserNotification(
+          t("notifications"),
+          t("notificationOpenOnly"),
+          "finbridge-test",
+          path,
         );
       } catch {
-        // subscription record error ignored
+        setNotificationStatus("notificationResubscribedDeliveryFailed");
       }
+    } catch (error) {
+      setNotificationStatus(
+        error instanceof Error && error.message.startsWith("notification")
+          ? error.message
+          : "notificationFailed",
+      );
+    } finally {
+      window.dispatchEvent(new Event("notification-permission"));
+      setNotificationBusy(false);
     }
   };
-
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      "Notification" in window &&
-      Notification.permission === "granted"
-    ) {
-      for (const n of localNotifications) {
-        if (!n.is_read && !notifiedIds.current.has(String(n.id))) {
-          notifiedIds.current.add(String(n.id));
-          try {
-            const targetUrl = getNotificationRoute(
-              String(n.type),
-              String(n.detail),
-              user.role,
-              prefix,
-            );
-            const browserNotif = new Notification(t(String(n.type)), {
-              body: t(String(n.detail)),
-              icon: "/favicon.ico",
-            });
-            browserNotif.onclick = () => {
-              window.focus();
-              void handleNotifClick(String(n.id));
-              router.push(targetUrl);
-            };
-          } catch {
-            // notification error ignored
-          }
-        }
-      }
+    const sync = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 30000);
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, [router]);
+  useEffect(() => {
+    if (browserPerm !== "granted" || !Number(user.notifications ?? 1)) return;
+    for (const n of localNotifications) {
+      const id = String(n.id);
+      if (Number(n.is_read) || notifiedIds.current.has(id)) continue;
+      notifiedIds.current.add(id);
+      const url = getNotificationRoute(
+        String(n.type),
+        String(n.detail),
+        user.role,
+        prefix,
+      );
+      void showBrowserNotification(
+        t(String(n.type)),
+        t(String(n.detail)),
+        `finbridge-${user.id}-${id}`,
+        url,
+      ).catch(() => {
+        notifiedIds.current.delete(id);
+        setNotificationStatus("notificationFailed");
+      });
     }
-  }, [localNotifications, prefix, router, t, user.role]);
+  }, [
+    localNotifications,
+    browserPerm,
+    prefix,
+    t,
+    user.id,
+    user.role,
+    user.notifications,
+  ]);
 
   const navRef = useRef<HTMLElement>(null);
   const collapsed = useSyncExternalStore(
@@ -456,6 +479,7 @@ export function Shell({
             ["project-evidence", "security-assessment", "api-keys", "settings"],
           ];
   const nav = (route: string) => {
+    if (user.role === "STUDENT" && user.plan_id === "student-free" && !freePages.includes(route)) return null;
     if (
       user.role === "MODERATOR" &&
       ((route.startsWith("admin/") &&
@@ -504,7 +528,7 @@ export function Shell({
         <div className="workspace-label">
           <span className="workspace-dot" />
           {t(user.role.toLowerCase())}
-          <span className="workspace-chevron">⌄</span>
+          <span className="workspace-chevron">{"※"}</span>
         </div>
         <nav
           ref={navRef}
@@ -749,18 +773,21 @@ export function Shell({
             </div>
           </div>
         </header>
-        <main id="main" className="main-content">
+        <main id="main" className={`main-content ${isAgentPage ? "agent-main-layout" : ""}`}>
           {children}
-          <footer className="app-footer">
-            <span>
-              <FiShield />
-              {t("sandboxDisclosure")}
-            </span>
-            <Link href={`${prefix}/reports`}>
-              {t("reportProblem")}
-              <FiArrowUpRight />
-            </Link>
-          </footer>
+          {!isAgentPage && (
+            <footer className="app-footer">
+              <FooterCredits />
+              <span>
+                <FiShield />
+                {t("sandboxDisclosure")}
+              </span>
+              <Link href={`${prefix}/reports`}>
+                {t("reportProblem")}
+                <FiArrowUpRight />
+              </Link>
+            </footer>
+          )}
         </main>
       </div>
       <nav className="bottom-nav">
@@ -839,26 +866,27 @@ export function Shell({
                 <span>{t("markAllAsRead")}</span>
               </button>
             )}
-            {typeof window !== "undefined" && "Notification" in window && (
+            {
               <button
                 type="button"
                 className={`button small ${browserPerm === "granted" ? "ghost" : "secondary"}`}
                 onClick={requestBrowserNotifications}
+                disabled={notificationBusy}
                 title={
                   browserPerm === "granted"
-                    ? t("browserNotifsActive")
+                    ? t("notificationResubscribe")
                     : t("enableBrowserNotifs")
                 }
               >
                 <FiBell />
-                <span>
-                  {browserPerm === "granted"
-                    ? t("browserNotifsActive")
-                    : t("enableBrowserNotifs")}
-                </span>
+                <span>{t("notificationResubscribe")}</span>
               </button>
-            )}
+            }
+          <button type="button" className="button secondary small" disabled={notificationBusy} onClick={testBrowserNotification}>{t("notificationTest")}</button>
           </div>
+          <p className="notification-guidance" role="status">
+            {t(notificationStatus || "notificationOpenOnly")}
+          </p>
           <div className="stack">
             {localNotifications.length ? (
               localNotifications.map((n) => (

@@ -1,4 +1,7 @@
 "use client";
+import { CompetitionBanner } from "./competition-banner";
+import { FooterCredits } from "./footer-credits";
+import { SupportedPaymentMethods } from "@/components/payments/supported-methods";
 import Image from "next/image";
 import {
   HomePlanningPreview,
@@ -47,6 +50,7 @@ export function PublicPage({
   ];
   return (
     <div className="public-layout">
+      {page === "home" && <CompetitionBanner />}
       <header className="public-header">
         <Link href={`/${locale}`}>
           <Brand />
@@ -298,6 +302,7 @@ export function PublicPage({
           </Card>
         )}
       </main>
+      <SupportedPaymentMethods />
       <footer className="public-footer">
         <div className="footer-brand">
           <Brand />
@@ -329,6 +334,7 @@ export function PublicPage({
           <Link href={href("login")}>{t("login")}</Link>
         </div>
         <div className="footer-bottom">
+          <FooterCredits />
           <span>© 2026 FinBridge AI</span>
           <span>{t("sandboxDisclosure")}</span>
         </div>

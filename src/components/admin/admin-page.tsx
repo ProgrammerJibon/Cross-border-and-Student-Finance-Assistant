@@ -41,7 +41,7 @@ const limitKeys = [
   "TRANSFER_SIMULATIONS",
   "TUITION_PLANS",
   "CSV_IMPORTS",
-  "PARENT_LINKS",
+  "PARENT_LINKS", "BENEFICIARIES", "BUDGETS",
 ];
 export function AdminPage({ data, path }: { data: Workspace; path: string }) {
   const { t, run } = useApp();

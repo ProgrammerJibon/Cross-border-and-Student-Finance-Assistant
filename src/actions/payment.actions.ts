@@ -1,4 +1,5 @@
 "use server";
+import { requireFamilyPlan } from "@/lib/entitlements";
 import { z } from "zod";
 import { requireUser, requireAdmin } from "@/lib/auth";
 import { action, requireCondition } from "@/lib/errors";
@@ -47,6 +48,7 @@ export async function cancelPaymentRequest(requestId: string) {
 export async function parentPaymentDecision(input: unknown) {
   return action(async () => {
     const u = await requireUser("PARENT");
+    await requireFamilyPlan(u.id);
     const v = z
       .object({ id, approve: z.boolean(), reason: z.string().min(3).max(500) })
       .parse(input);
@@ -73,6 +75,7 @@ export async function addBeneficiary(input: unknown) {
 export async function parentBeneficiaryDecision(input: unknown) {
   return action(async () => {
     const u = await requireUser("PARENT");
+    await requireFamilyPlan(u.id);
     const v = z
       .object({ id, approve: z.boolean(), reason: z.string().min(3).max(500) })
       .parse(input);

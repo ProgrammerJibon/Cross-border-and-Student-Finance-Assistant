@@ -17,6 +17,9 @@ import { canUseAgentTool } from "./tool-policy";
 
 type Call = { id: string; name: string; args: unknown };
 type Json = Record<string, unknown>;
+// Only immutable calculations and schemas are reusable during a run. Balances,
+// permissions, subscriptions and payment state must always be read afresh.
+const reusableTools = new Set(["calculate", "getActionCapabilities"]);
 export function providerTools() {
   return Object.entries(toolSchemas).map(([name, schema]) => {
     const json = z.toJSONSchema(schema) as Json;
@@ -42,6 +45,8 @@ export async function providerAgent(
   const definitions = providerTools().filter(
     (t) => !config.role || canUseAgentTool(config.role, t.name),
   );
+  const allowedTools = new Set(definitions.map((tool) => tool.name));
+  const reusableResults = new Map<string, unknown>();
   const instructions = `${agentInstructions} Respond in ${locale}.`;
   const outputs: Record<string, unknown> = {};
   const steps: string[] = [];
@@ -191,7 +196,7 @@ export async function providerAgent(
     let finished = false;
     for (const call of calls) {
       let output: unknown;
-      if (!Object.hasOwn(toolSchemas, call.name))
+      if (!allowedTools.has(call.name))
         output = { failed: true, code: "FORBIDDEN" };
       else {
         let args = call.args;
@@ -202,7 +207,15 @@ export async function providerAgent(
             args = null;
           }
         }
-        output = await execute(userId, runId, call.name as ToolName, args);
+        const cacheKey = JSON.stringify([call.name, args]);
+        output = reusableResults.has(cacheKey)
+          ? reusableResults.get(cacheKey)
+          : await execute(userId, runId, call.name as ToolName, args);
+        if (
+          reusableTools.has(call.name) &&
+          !(output as { failed?: boolean })?.failed
+        )
+          reusableResults.set(cacheKey, output);
         collectAgentOutput(outputs, call.name, output);
         steps.push(call.name);
         toolCalls.push({
@@ -244,6 +257,9 @@ export async function providerAgent(
           tool_call_id: call.id,
           content: JSON.stringify(output),
         });
+      // A final answer must terminate execution, even if a provider appends
+      // additional tool calls to the same response.
+      if (finished) break;
     }
     if (finished)
       return { ...structuredAgentResult(outputs, steps), toolCalls, usage };

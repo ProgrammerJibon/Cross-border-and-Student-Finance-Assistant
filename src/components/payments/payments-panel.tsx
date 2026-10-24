@@ -1,4 +1,6 @@
 "use client";
+import { HostedCheckout, PaymentVerification } from "@/components/billing/hosted-checkout";
+import { GatewaySettings } from "./gateway-settings";
 import { formatDate } from "@/lib/dates";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
@@ -112,7 +114,7 @@ export function PaymentsPanel({
       kind,
       account_id: String(account?.id || ""),
       method:
-        kind === "TOPUP" ? "CARD" : kind === "WITHDRAW" ? "BANK" : "INTERNAL",
+        kind === "TOPUP" ? "UNIONPAY" : kind === "WITHDRAW" ? "BANK" : "INTERNAL",
       amount: search.get("amount") || "",
       recipient: "",
       destination: "",
@@ -182,6 +184,8 @@ export function PaymentsPanel({
   );
   return (
     <section className="payments-panel">
+      {methodAdmin && <GatewaySettings/>}
+      {search.get("checkout") && <Card><PaymentVerification id={search.get("checkout")!}/></Card>}
       {!compact && (
         <Heading title={t(mode)} subtitle={t("paymentWorkflowHelp")} />
       )}
@@ -294,7 +298,7 @@ export function PaymentsPanel({
                       >
                         {t("details")}
                       </button>
-                      {r.user_id === data.user.id && r.status === "DRAFT" && (
+                      {r.user_id === data.user.id && (r.status === "DRAFT" || (r.kind === "TOPUP" && r.status === "PROCESSING")) && (
                         <button
                           className="button"
                           onClick={() => openConfirm(r)}
@@ -475,10 +479,13 @@ export function PaymentsPanel({
                 {
                   name: "method",
                   label: "paymentMethod",
-                  options: ws.methods
+                  options: [...ws.methods].sort((a,b) => {
+                    const order=["UNIONPAY","STRIPE","ALIPAY","WECHAT","PAYPAL"];
+                    return (order.includes(String(a.code))?order.indexOf(String(a.code)):99)-(order.includes(String(b.code))?order.indexOf(String(b.code)):99);
+                  })
                     .filter(
                       (m) =>
-                        m.active &&
+                        m.active && (data.user.is_demo || m.code !== "CARD") &&
                         (form.kind === "TOPUP"
                           ? m.deposit_enabled
                           : form.kind === "WITHDRAW"
@@ -558,7 +565,7 @@ export function PaymentsPanel({
                     ? {
                         method:
                           next.kind === "TOPUP"
-                            ? "CARD"
+                            ? "UNIONPAY"
                             : next.kind === "WITHDRAW"
                               ? "BANK"
                               : "INTERNAL",
@@ -594,7 +601,7 @@ export function PaymentsPanel({
       )}
       {modal === "confirm" && selected && (
         <Modal title={t("reviewConfirm")} onClose={() => !busy && setModal("")}>
-          <form
+          {!data.user.is_demo && selected.kind === "TOPUP" && ["UNIONPAY","STRIPE","PAYPAL","ALIPAY","WECHAT"].includes(String(selected.method)) ? <>{displayRequest(selected)}<HostedCheckout requestId={String(selected.id)}/></> : <form
             onSubmit={(e) => {
               e.preventDefault();
               void done(() =>
@@ -677,7 +684,7 @@ export function PaymentsPanel({
             <button className="button" disabled={busy}>
               {t(busy ? "loading" : "confirmPayment")}
             </button>
-          </form>
+          </form>}
         </Modal>
       )}
       {modal === "history" && selected && (

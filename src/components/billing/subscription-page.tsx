@@ -1,26 +1,24 @@
 "use client";
-import { useState } from "react";
+import { familyPlans } from "@/lib/plan-policy";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FiCheck, FiCreditCard, FiShield } from "react-icons/fi";
+import { FiCheck, FiLock } from "react-icons/fi";
 import { useApp } from "@/components/ui/providers";
 import {
   Card,
   Heading,
   Badge,
   Progress,
-  FormFields,
   DataCards,
   Status,
 } from "@/components/ui/primitives";
-import {
-  purchasePlan,
-  cancelSubscription,
-} from "@/actions/subscription.actions";
+import { cancelSubscription } from "@/actions/subscription.actions";
 import { formatMoney } from "@/lib/money";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { ProviderCheckout, ProviderPaymentHistory } from "./provider-checkout";
 import { parseJson } from "@/lib/json";
+import { PlanIcon } from "./plan-icon";
 export function Plans({
   plans,
   publicPage = false,
@@ -37,28 +35,40 @@ export function Plans({
           className={`plan-card ${p.recommended ? "plan-recommended" : ""}`}
         >
           {!!p.recommended && <Badge>{t("recommended")}</Badge>}
-          <h2>{t(String(p.name))}</h2>
+          <h2 className="plan-heading-with-icon">
+            <PlanIcon planId={String(p.id)} size={26} aria-hidden="true" />
+            <span>{t(String(p.name))}</span>
+          </h2>
           <p>{t(String(p.description_key))}</p>
           <div className="plan-price">
             {formatMoney(String(p.monthly), String(p.currency), locale)}
             <small>{t("perMonth")}</small>
           </div>
-          <ul>
+          {p.monthly_rmb != null && <p className="muted">{t("approximateRmb")} {formatMoney(String(p.monthly_rmb), "CNY", locale)} {t("perMonth")}</p>}
+          <ul className="plan-features">{(p.id === "student-free" ? ["freeSharedAi", "freeSidebar", "freeBeneficiaries", "freeWallets", "freeBudgets", "freeChats"] : p.id === "student" ? ["proAllFeatures", "proSharedAi"] : p.id === "family" ? ["liteProSeats", "liteFreeSeats", "familyControls"] : ["familyProSeats", "familyFreeSeats", "familyControls", "familyExtraSeats"]).map(key => <li key={key}><FiCheck /><span>{t(key)}</span></li>)}</ul>
+          {p.id === "family-pro" && <p>{t("extraSeatPrice")} {formatMoney("256", "BDT", locale)} / {t("perMonth")} ({t("approximateRmb")} {formatMoney(String(p.extra_rmb || "0"), "CNY", locale)})</p>}
+          <details open className="plan-quotas"><summary>{t("planQuotas")}</summary><ul>
             {Object.entries(
               parseJson<Record<string, number>>(p.limits, {}),
             ).map(([k, v]) => (
               <li key={k}>
-                <FiCheck />
+                {v > 0 ? <FiCheck /> : <FiLock />}
                 <span>{t(k)}</span>
                 <b>{v}</b>
               </li>
             ))}
-          </ul>
+          </ul></details>
           <Link
             className={`button full ${p.recommended ? "" : "secondary"}`}
             href={`/${locale}/${publicPage || p.id === "trial" ? "register" : `subscription/checkout?plan=${p.id}`}`}
           >
-            {t(p.id === "trial" ? "startTrial" : "upgrade")}
+            {t(
+              p.id === "student-free"
+                ? "chooseFree"
+                : p.id === "trial"
+                  ? "startTrial"
+                  : "upgrade",
+            )}
           </Link>
         </Card>
       ))}
@@ -76,166 +86,55 @@ export function SubscriptionPage({
   const params = useSearchParams();
   const plan =
     data.plans.find((p) => p.id === params.get("plan")) ||
-    data.plans.find((p) => p.id === "student")!;
-  const [form, setForm] = useState<Record<string, string>>({
-    cardholder: data.user.name,
-    card: "",
-    expiry: "",
-    cvv: "",
-  });
-  const [busy, setBusy] = useState(false);
-  const [saveCard, setSaveCard] = useState(false);
-  const [savedCardId, setSavedCardId] = useState("");
-  const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
-  const [result, setResult] = useState<{
-    status: string;
-    reference: string;
-  } | null>(null);
+    data.plans.find(
+      (p) => p.id === (data.user.role === "PARENT" ? "family" : "student"),
+    )!;
   const sub = data.subscription[0];
-  const limits = sub
-    ? parseJson<Record<string, number>>(sub.limits, {})
-    : {};
-  if (checkout)
+  const locked = !!data.user.is_demo || !!sub?.sponsored_by;
+  const availablePlans = data.plans.filter((p) =>
+    data.user.role === "PARENT"
+      ? familyPlans.includes(String(p.id))
+      : ["student-free", "student"].includes(String(p.id)),
+  );
+  const limits = sub ? parseJson<Record<string, number>>(sub.limits, {}) : {};
+  if (checkout && !locked && availablePlans.some((p) => p.id === plan?.id))
     return (
-      <>
-        <Heading title={t("checkout")} subtitle={t("paymentNote")} />
-        <div className="checkout-grid">
-          <Card>
-            <Badge>{t("sandbox")}</Badge>
-            <h2>{t(String(plan.name))}</h2>
-            <p>{t(String(plan.description_key))}</p>
-            <strong className="metric-value">
-              {formatMoney(String(plan[cycle]), String(plan.currency), locale)}
-            </strong>
-            <p>{t(cycle === "yearly" ? "perYear" : "perMonth")}</p>
-            <label>
-              {t("billingCycle")}
-              <select
-                aria-label={t("billingCycle")}
-                value={cycle}
-                onChange={(e) =>
-                  setCycle(e.target.value as "monthly" | "yearly")
-                }
-              >
-                <option value="monthly">{t("monthly")}</option>
-                <option value="yearly">{t("yearly")}</option>
-              </select>
-            </label>
-            <div className="checkout-card-art">
-              <FiCreditCard size={35} />
-              <span>•••• •••• •••• 4242</span>
-              <strong>{t("sandbox")}</strong>
-            </div>
-          </Card>
-          <Card>
-            <h2>{t("checkout")}</h2>
-            <button
-              className="text-link"
-              onClick={() =>
-                setForm({
-                  ...form,
-                  card: "4242424242424242",
-                  expiry: "12/29",
-                  cvv: "123",
-                })
-              }
-            >
-              {t("useDemoCard")}
-            </button>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setBusy(true);
-                const r = await run(
-                  () =>
-                    purchasePlan({
-                      ...form,
-                      plan: plan.id,
-                      saveCard,
-                      cycle,
-                      savedCardId: savedCardId || undefined,
-                    }),
-                  { quiet: true },
-                );
-                if (r) setResult(r);
-                setBusy(false);
-              }}
-            >
-              <label className="model-select">
-                {t("savedCards")}
-                <select
-                  value={savedCardId}
-                  onChange={(e) => setSavedCardId(e.target.value)}
-                >
-                  <option value="">{t("newCard")}</option>
-                  {data.savedCards.map((c) => (
-                    <option key={String(c.id)} value={String(c.id)}>
-                      {c.label} · •••• {c.last_four} · {c.expiry}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {!savedCardId && (
-                <FormFields
-                  fields={[
-                    { name: "cardholder" },
-                    { name: "card" },
-                    { name: "expiry" },
-                    { name: "cvv", type: "password" },
-                  ]}
-                  values={form}
-                  setValues={setForm}
-                />
-              )}
-              {!savedCardId && (
-                <label className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={saveCard}
-                    onChange={(e) => setSaveCard(e.target.checked)}
-                  />
-                  {t("saveCard")}
-                </label>
-              )}
-              <p className="muted">
-                <FiShield />
-                {t("paymentNote")}
-              </p>
-              <button className="button full" disabled={busy}>
-                {t(busy ? "loading" : "pay")}
-              </button>
-            </form>
-            {result && (
-              <div className="risk-panel">
-                <Status value={result.status} />
-                <p>{result.reference}</p>
-                <Link className="text-link" href={`/${locale}/subscription`}>
-                  {t("subscription")}
-                </Link>
-              </div>
-            )}
-          </Card>
-        </div>
-      </>
+      <ProviderCheckout
+        key={`${plan?.id}-${params.get("checkout") || ""}-${params.get("cycle") || ""}`}
+        plan={plan}
+      />
     );
   return (
     <>
-      <Heading title={t("subscription")} subtitle={t("planPro")} />
+      <Heading
+        title={t("subscription")}
+        subtitle={t(
+          data.user.is_demo
+            ? "demoPlanLocked"
+            : sub?.sponsored_by
+              ? "familyIncluded"
+              : data.user.role === "PARENT"
+                ? "familyPurchaseRequired"
+                : "studentUpgradeHelp",
+        )}
+      />
       <Card>
         <div className="between">
           <div>
             <Badge>{t("currentPlan")}</Badge>
-            <h2>{t(String(sub?.name || "Free Trial"))}</h2>
+            <h2>{t(String(sub?.name || "familyPurchaseRequired"))}</h2>
             <p className="muted">
               {t("billingCycle")} ·{" "}
-              {sub?.ends_at
-                ? new Intl.DateTimeFormat(locale, {
-                    dateStyle: "medium",
-                    timeZone: data.user.timezone,
-                  }).format(
-                    new Date(String(sub.ends_at).replace(" ", "T") + "Z"),
-                  )
-                : "—"}
+              {sub?.plan_id === "student-free"
+                ? t("freeForever")
+                : sub?.ends_at
+                  ? new Intl.DateTimeFormat(locale, {
+                      dateStyle: "medium",
+                      timeZone: data.user.timezone,
+                    }).format(
+                      new Date(String(sub.ends_at).replace(" ", "T") + "Z"),
+                    )
+                  : "—"}
             </p>
           </div>
           <Status value={String(sub?.status || "PENDING")} />
@@ -263,14 +162,18 @@ export function SubscriptionPage({
             );
           })}
         </div>
-        <button
-          className="text-link danger-text"
-          onClick={() => run(cancelSubscription)}
-        >
-          {t("cancelSubscription")}
-        </button>
+        {!locked &&
+          sub?.plan_id !== "student-free" && (
+            <button
+              className="text-link danger-text"
+              onClick={() => run(cancelSubscription)}
+            >
+              {t("cancelSubscription")}
+            </button>
+          )}
       </Card>
-      <Plans plans={data.plans} />
+      {!locked && <Plans plans={availablePlans} />}
+      <ProviderPaymentHistory />
       <Card>
         <h2>{t("subscriptionHistory")}</h2>
         <DataCards

@@ -100,7 +100,7 @@ export function ModelManager({
           {
             key: "key_last_four",
             label: "apiKey",
-            render: (r) => `••••${r.key_last_four}`,
+            render: () => t("keyStored"),
           },
           { key: "active", render: (r) => t(r.active ? "active" : "disabled") },
         ]}

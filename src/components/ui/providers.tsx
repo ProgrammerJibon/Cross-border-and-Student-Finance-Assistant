@@ -109,11 +109,20 @@ export function Providers({
           },
         },
         typography: {
-          fontFamily: "Arial, Helvetica, sans-serif",
+          fontFamily: '"Segoe UI", Arial, sans-serif',
           button: { textTransform: "none", fontWeight: 600 },
         },
-        shape: { borderRadius: 12 },
+        shape: { borderRadius: 14 },
         components: {
+          MuiOutlinedInput: {
+            styleOverrides: {
+              root: {
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: mode === "dark" ? "#526963" : "#91a69e" },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderWidth: 1, borderColor: mode === "dark" ? "#83d9ba" : "#126c58" },
+              },
+              input: { "&:focus, &:focus-visible": { outline: "none", boxShadow: "none" } },
+            },
+          },
           MuiButton: { styleOverrides: { root: { minHeight: 44 } } },
           MuiDialog: { styleOverrides: { paper: { backgroundImage: "none" } } },
         },

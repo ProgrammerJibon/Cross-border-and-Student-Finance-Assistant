@@ -1,4 +1,5 @@
 "use server";
+import { cancelUserRenewals } from "@/services/recurring.service";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
@@ -140,6 +141,7 @@ export async function closeAccount(confirmation: string) {
   return action(async () => {
     const u = await requireUser();
     requireCondition(confirmation === u.email, "VALIDATION_ERROR");
+    await cancelUserRenewals(u.id);
     await atomic(async (db) => {
       await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
       requireCondition(

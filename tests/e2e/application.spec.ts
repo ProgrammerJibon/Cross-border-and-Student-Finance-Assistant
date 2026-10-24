@@ -11,7 +11,7 @@ const connection = () =>
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
   });
-async function demo(page: Page, role = "Student") {
+async function demo(page: Page, role = "Student Premium") {
   await page.goto("/en/demo");
   await page
     .locator(".demo-profile")
@@ -368,12 +368,9 @@ test("registration, onboarding, account and transaction forms, sandbox checkout"
     page.getByText("Test grocery purchase", { exact: true }),
   ).toBeVisible();
   await page.goto("/en/subscription/checkout?plan=student");
-  await page
-    .getByLabel("Billing cycle", { exact: true })
-    .selectOption("yearly");
-  await page.getByRole("button", { name: "Use demo card" }).click();
-  await page.getByRole("button", { name: "Simulate payment" }).click();
-  await expect(page.getByText("Success", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Yearly", exact: true }).click();
+  await expect(page.locator(".checkout-total")).toContainText("USD");
+  await expect(page.getByRole("radio").first()).toContainText("PayPal");
   await page.goto("/en/subscription");
   await expect(page.locator(".quotas")).toBeVisible();
   const db = await connection();

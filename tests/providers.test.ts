@@ -17,6 +17,47 @@ const answer = {
   url: null,
   options: [],
 };
+test("provider reuses calculations, rejects unauthorized tools, and stops at respond", async (t) => {
+  let round = 0;
+  const executed: string[] = [];
+  t.mock.method(globalThis, "fetch", async () => {
+    round++;
+    const calls =
+      round === 1
+        ? ["calculate", "calculate", "getSettlementQueue"]
+        : ["respond", "createAlert"];
+    return Response.json({
+      output: calls.map((name, i) => ({
+        type: "function_call",
+        name,
+        call_id: `${round}-${i}`,
+        arguments: JSON.stringify(
+          name === "calculate"
+            ? { operation: "add", left: "1", right: "2" }
+            : answer,
+        ),
+      })),
+    });
+  });
+  await providerAgent(
+    "u",
+    "r",
+    [{ role: "user", content: "Calculate 1 + 2" }],
+    "en",
+    {
+      company: "OPENAI",
+      model: "fixture",
+      key: "fixture-key",
+      role: "STUDENT",
+    },
+    async (_u, _r, name) => {
+      executed.push(name);
+      return name === "respond" ? answer : { result: "3" };
+    },
+  );
+  assert.deepEqual(executed, ["calculate", "respond"]);
+  assert.equal(round, 2);
+});
 for (const company of [
   "GEMINI",
   "OPENAI",

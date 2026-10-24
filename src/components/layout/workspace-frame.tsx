@@ -32,7 +32,7 @@ export function WorkspaceFrame({
   )
     return children;
   return (
-    <Shell user={user} notifications={notifications}>
+    <Shell key={user.id} user={user} notifications={notifications}>
       {children}
     </Shell>
   );

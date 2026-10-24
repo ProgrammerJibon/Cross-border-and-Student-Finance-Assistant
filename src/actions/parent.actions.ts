@@ -1,4 +1,6 @@
 "use server";
+import { familySeats } from "@/lib/plan-policy";
+import { effectiveSubscription, requireFamilyPlan, requireFamilyStudent } from "@/lib/entitlements";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
@@ -13,10 +15,12 @@ export async function inviteStudent(email: string) {
     const u = await requireUser("PARENT");
     z.email().max(190).parse(email);
     return atomic(async (db) => {
+      await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
+      await requireFamilyPlan(u.id, db);
       await checkUsageLimit(u.id, "PARENT_LINKS", db);
       const [student] = await rows<{ id: string }>(
-        "SELECT id FROM users WHERE email=? AND role='STUDENT' AND status='ACTIVE'",
-        [email.toLowerCase()],
+        "SELECT id FROM users WHERE email=? AND role='STUDENT' AND status='ACTIVE' AND is_demo=?",
+        [email.toLowerCase(),u.is_demo],
         db,
       );
       requireCondition(student, "STUDENT_NOT_FOUND");
@@ -65,7 +69,27 @@ export async function acceptInvitation(token: string) {
   return action(async () => {
     const u = await requireUser("STUDENT");
     z.string().length(48).parse(token);
+    const [invitation] = await rows<{ parent_id: string }>(
+      "SELECT parent_id FROM family_links WHERE invite_hash=?",
+      [createHash("sha256").update(token).digest("hex")],
+    );
+    requireCondition(invitation, "INVALID_TOKEN");
     return atomic(async (db) => {
+      await rows(
+        "SELECT id FROM users WHERE id=? FOR UPDATE",
+        [invitation.parent_id],
+        db,
+      );
+      await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
+      await requireFamilyPlan(invitation.parent_id, db);
+      const [seats] = await rows<{ n: number }>(
+        "SELECT COUNT(*) n FROM family_links WHERE parent_id=? AND status='LINKED'",
+        [invitation.parent_id],
+        db,
+      );
+      const [plan] = await effectiveSubscription(invitation.parent_id, db);
+      requireCondition(seats.n < familySeats(String(plan?.plan_id), Number(plan?.extra_seats || 0)).total, "PLAN_LIMIT_REACHED");
+
       const [f] = await rows<{
         id: string;
         student_id: string;
@@ -79,9 +103,17 @@ export async function acceptInvitation(token: string) {
         f && f.student_id === u.id && f.invite_email === u.email.toLowerCase(),
         "INVALID_TOKEN",
       );
+      await requireFamilyStudent(u.id, f.id, db);
       await write(
         "UPDATE family_links SET status='LINKED',invite_hash=NULL WHERE id=?",
         [f.id],
+        db,
+      );
+      // Family pays for the effective Pro entitlement; the student's own plan
+      // remains Free so unlinking or expiry revokes the benefit immediately.
+      await write(
+        "INSERT INTO subscriptions(id,user_id,plan_id,status,starts_at,ends_at) VALUES (?,?,'student-free','ACTIVE',UTC_TIMESTAMP(),'2099-12-31') ON DUPLICATE KEY UPDATE plan_id='student-free',status='ACTIVE',ends_at='2099-12-31'",
+        [randomUUID(), u.id],
         db,
       );
       await notify(f.student_id, "LINK_CONFIRMATION", f.id, db);
@@ -109,12 +141,41 @@ export async function updateFamily(input: unknown) {
       })
       .parse(input);
     return atomic(async (db) => {
-      const [f] = await rows<{ status: string }>(
-        "SELECT status FROM family_links WHERE id=? AND parent_id=? FOR UPDATE",
+      await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
+      if (v.status !== "REVOKED") await requireFamilyPlan(u.id, db);
+      if (v.status === "LINKED") {
+        const [seats] = await rows<{ n: number }>(
+          "SELECT COUNT(*) n FROM family_links WHERE parent_id=? AND status='LINKED'",
+          [u.id],
+          db,
+        );
+        const [plan] = await effectiveSubscription(u.id, db);
+        requireCondition(seats.n < familySeats(String(plan?.plan_id), Number(plan?.extra_seats || 0)).total, "PLAN_LIMIT_REACHED");
+      }
+      const [f] = await rows<{ status: string; student_id: string }>(
+        "SELECT status,student_id FROM family_links WHERE id=? AND parent_id=? FOR UPDATE",
         [v.id, u.id],
         db,
       );
       requireCondition(f, "NOT_FOUND");
+      if (v.status) requireCondition(f.status !== "REVOKED", "INVALID_STATE");
+      if (v.status === "LINKED")
+        await requireFamilyStudent(f.student_id, v.id, db);
+      if (
+        v.status === "LINKED" ||
+        (v.status === "REVOKED" && f.status === "LINKED")
+      ) {
+        await rows(
+          "SELECT id FROM users WHERE id=? FOR UPDATE",
+          [f.student_id],
+          db,
+        );
+        await write(
+          "INSERT INTO subscriptions(id,user_id,plan_id,status,starts_at,ends_at) VALUES (?,?,'student-free','ACTIVE',UTC_TIMESTAMP(),'2099-12-31') ON DUPLICATE KEY UPDATE plan_id='student-free',status='ACTIVE',ends_at='2099-12-31'",
+          [randomUUID(), f.student_id],
+          db,
+        );
+      }
       if (v.status === "LINKED")
         requireCondition(f.status === "PENDING", "INVALID_STATE");
       if (v.status)
@@ -167,6 +228,7 @@ export async function updateControls(input: unknown) {
       })
       .parse(input);
     return atomic(async (db) => {
+      await requireFamilyPlan(u.id, db);
       const [owner] = await rows<{ student_id: string }>(
         "SELECT student_id FROM family_links WHERE id=? AND parent_id=? AND status='LINKED'",
         [v.link_id, u.id],
@@ -223,6 +285,7 @@ export async function decideApproval(input: unknown) {
       })
       .parse(input);
     return atomic(async (db) => {
+      await requireFamilyPlan(u.id, db);
       const [p] = await rows<{ transfer_id: string; user_id: string }>(
         "SELECT p.transfer_id,t.user_id FROM parent_approvals p JOIN sandbox_transfers t ON t.id=p.transfer_id JOIN family_links f ON f.student_id=t.user_id AND f.parent_id=p.parent_id AND f.status='LINKED' WHERE p.id=? AND p.parent_id=? AND p.status='PENDING' FOR UPDATE",
         [v.id, u.id],

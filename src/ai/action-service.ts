@@ -1,6 +1,7 @@
 import { getRates, inCurrency } from "@/services/currency.service";
 import { parseJson } from "@/lib/json";
 import "server-only";
+import { effectiveSubscription } from "@/lib/entitlements";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { rows, write, atomic } from "@/lib/db";
@@ -129,6 +130,7 @@ export async function proposeAgentAction(
 }
 export async function agentWorkspaceData(userId: string, topic: string) {
   const actor = await paymentActor(userId);
+  if (topic === "subscriptions") return effectiveSubscription(userId);
   const queries: Record<string, string> = {
     tuition:
       "SELECT * FROM tuition_invoices WHERE user_id=? ORDER BY due_date LIMIT 50",

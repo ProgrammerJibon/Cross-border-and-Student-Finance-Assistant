@@ -1,4 +1,5 @@
 "use client";
+import { DemoProfiles } from "./demo-profiles";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -7,7 +8,6 @@ import {
   FiShield,
   FiUsers,
   FiZap,
-  FiBookOpen,
 } from "react-icons/fi";
 import { useApp } from "@/components/ui/providers";
 import {
@@ -20,7 +20,6 @@ import {
 import {
   login,
   register,
-  demoLogin,
   forgotPassword,
   resetPassword,
 } from "@/actions/auth.actions";
@@ -28,7 +27,7 @@ import { completeOnboarding } from "@/actions/user.actions";
 import { Brand, LanguageSwitch, ThemeToggle } from "@/components/layout/shell";
 import { ProfilePhoto } from "@/components/ui/profile-photo";
 import { currencyOptions } from "@/components/accounts/money-page";
-import type { Role, User } from "@/types";
+import type { User } from "@/types";
 export function AuthPage({ page }: { page: string }) {
   const { t, locale, run, theme, catalog } = useApp();
   const router = useRouter();
@@ -115,37 +114,7 @@ export function AuthPage({ page }: { page: string }) {
         {page === "demo" ? (
           <div className="demo-content">
             <Heading title={t("demoTitle")} subtitle={t("demoSubtitle")} />
-            {(["STUDENT", "PARENT", "ADMIN"] as Role[]).map((role, i) => (
-              <button
-                className="demo-profile"
-                key={role}
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  const r = await run(() => demoLogin(role), {
-                    quiet: true,
-                    refresh: false,
-                  });
-                  if (r) route(r);
-                  setBusy(false);
-                }}
-              >
-                <span>
-                  {
-                    [
-                      <FiBookOpen key="s" />,
-                      <FiUsers key="p" />,
-                      <FiShield key="a" />,
-                    ][i]
-                  }
-                </span>
-                <div>
-                  <h3>{t(role.toLowerCase())}</h3>
-                  <p>{t(["demoStudent", "demoParent", "demoAdmin"][i])}</p>
-                </div>
-                <FiArrowRight />
-              </button>
-            ))}
+            <DemoProfiles />
           </div>
         ) : (
           <div className="auth-form">

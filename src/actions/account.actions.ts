@@ -1,6 +1,6 @@
 "use server";
 import { randomUUID } from "node:crypto";
-import { requireUser } from "@/lib/auth";
+import { requireWorkspaceUser as requireUser } from "@/lib/auth";
 import { atomic, rows, write } from "@/lib/db";
 import { action, requireCondition } from "@/lib/errors";
 import { accountSchema, id } from "@/lib/validation";

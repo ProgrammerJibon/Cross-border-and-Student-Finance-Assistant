@@ -4,6 +4,7 @@ import { sessionPayload } from "./session";
 import { AppError } from "./errors";
 import type { Role, User } from "@/types";
 import { hasPermission, type AdminSection } from "./admin-permissions";
+import { effectiveSubscription, requireFamilyPlan } from "./entitlements";
 export async function currentUser(): Promise<User | null> {
   const p = await sessionPayload();
   if (!p?.sub) return null;
@@ -11,6 +12,7 @@ export async function currentUser(): Promise<User | null> {
     "SELECT u.id,u.name,u.email,u.role,u.status,u.session_version,u.is_demo,u.onboarded,u.avatar,u.admin_permissions,p.country_code,p.ai_model_id,p.language,p.theme,p.preferred_currency,p.timezone,p.notifications,p.auto_alerts FROM users u JOIN user_preferences p ON p.user_id=u.id WHERE u.id=?",
     [p.sub],
   );
+  if (u) u.plan_id = String((await effectiveSubscription(u.id))[0]?.plan_id || "");
   return u && u.status === "ACTIVE" && u.session_version === p.version
     ? u
     : null;
@@ -25,4 +27,9 @@ export async function requireUser(role?: Role) {
   if (!u) throw new AppError("UNAUTHORIZED");
   if (role && u.role !== role) throw new AppError("FORBIDDEN");
   return u;
+}
+export async function requireWorkspaceUser(role?: Role) {
+  const user = await requireUser(role);
+  if (user.role === "PARENT") await requireFamilyPlan(user.id);
+  return user;
 }

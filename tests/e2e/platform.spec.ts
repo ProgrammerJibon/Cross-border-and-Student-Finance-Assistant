@@ -239,10 +239,12 @@ test("personal Gemini configuration is encrypted, selectable and removable; demo
       0,
     );
     await page.goto("/en/subscription/checkout?plan=student");
-    await page.getByRole("button", { name: "Use demo card" }).click();
-    await page.getByLabel("Save this demo card for next time").check();
-    await page.getByRole("button", { name: "Simulate payment" }).click();
-    await expect(page.getByText("Success", { exact: true })).toBeVisible();
+    await expect(page.getByRole("radio").first()).toContainText("PayPal");
+    // Saved demo cards belong to the wallet simulator, not provider checkout.
+    await user.db.execute(
+      "INSERT INTO saved_cards(id,user_id,label,last_four,expiry,demo_token) VALUES (?, ?, 'Test wallet card', '4242', '12/29', 'DEMO_SUCCESS')",
+      [randomUUID(), user.id],
+    );
     await page.goto("/en/settings");
     const cards = page.locator(".card").filter({
       has: page.getByRole("heading", {

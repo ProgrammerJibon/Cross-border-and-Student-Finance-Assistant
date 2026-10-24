@@ -3,11 +3,21 @@ import { pathToFileURL } from "node:url";
 import { migratePlatform } from "./platform-migration.mjs";
 import { migratePayments } from "./payment-migration.mjs";
 import { migrateAgent } from "./agent-migration.mjs";
+import { migrateCommerce } from "./commerce-migration.mjs";
+import { migrateBilling } from "./billing-migration.mjs";
 
 export async function migrate(db) {
   await migratePlatform(db);
   await migratePayments(db);
   await migrateAgent(db);
+  await migrateBilling(db);
+  await migrateCommerce(db);
+  await db.execute(`CREATE TABLE IF NOT EXISTS notification_devices (
+    user_id VARCHAR(64) NOT NULL, device_id CHAR(36) NOT NULL,
+    scope VARCHAR(1000) NOT NULL, permission VARCHAR(20) NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY(user_id,device_id), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`);
   await db.execute(
     `CREATE TABLE IF NOT EXISTS notification_subscriptions (
       id VARCHAR(64) PRIMARY KEY,

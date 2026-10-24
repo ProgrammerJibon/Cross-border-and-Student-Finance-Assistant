@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { appConfig } from "@/lib/config";
 import "./globals.css";
+import "./design-refresh.css";
 export const metadata: Metadata = {
+  appleWebApp: { capable: true, title: "FinBridge", statusBarStyle: "default" },
+  icons: {
+    icon: { url: "/icons/brand-icon.svg", type: "image/svg+xml" },
+    apple: "/icons/icon-192.png",
+  },
   title: { default: appConfig.name, template: `%s · ${appConfig.name}` },
   description:
     "Cross-border and student finance sandbox: tuition planning, remittance comparison, risk controls and auditable AI execution.",

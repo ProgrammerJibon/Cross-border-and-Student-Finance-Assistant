@@ -8,6 +8,7 @@ export const paymentMethod = z.enum([
   "ALIPAY",
   "WECHAT",
   "UNIONPAY",
+  "STRIPE",
 ]);
 export const beneficiarySchema = z
   .object({

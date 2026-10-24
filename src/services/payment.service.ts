@@ -1,6 +1,8 @@
 import { parseJson } from "@/lib/json";
 import { getRiskPolicy } from "./financial-config.service";
 import "server-only";
+import type { Checkout } from "./checkout-provider.service";
+import { requireFamilyPlan } from "@/lib/entitlements";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { atomic, rows, write, type DB } from "@/lib/db";
@@ -65,6 +67,7 @@ export async function paymentActor(userId: string, db?: DB) {
     db,
   );
   requireCondition(u?.status === "ACTIVE", "UNAUTHORIZED");
+  if (u.role === "PARENT") await requireFamilyPlan(userId, db);
   return u;
 }
 async function customer(userId: string, db?: DB) {
@@ -188,7 +191,10 @@ async function parentRequirements(r: Request, db: DB) {
       [],
       db,
     );
-    const cap = setting ? parseJson<{ nonBeneficiaryRmb?: string }>(setting.value, {}).nonBeneficiaryRmb || "1000" : "1000";
+    const cap = setting
+      ? parseJson<{ nonBeneficiaryRmb?: string }>(setting.value, {})
+          .nonBeneficiaryRmb || "1000"
+      : "1000";
     requireCondition(
       D(inCurrency(r.amount, r.currency, "CNY", rates)).lte(cap),
       "NON_BENEFICIARY_LIMIT",
@@ -611,6 +617,8 @@ export async function confirmPayment(
     const r = await lockRequest(id, db);
     requireCondition(r.user_id === userId);
     await customer(userId, db);
+    const [owner] = await rows<{is_demo:number}>("SELECT is_demo FROM users WHERE id=?",[userId],db);
+    requireCondition(owner.is_demo || r.kind !== "TOPUP" || !["UNIONPAY","STRIPE","PAYPAL","ALIPAY","WECHAT","CARD"].includes(r.method), "USE_PROVIDER_CHECKOUT");
     if (r.status !== "DRAFT") return { id: r.id, status: r.status };
     requireCondition(
       Date.now() - new Date(r.created_at.replace(" ", "T") + "Z").getTime() <
@@ -764,6 +772,8 @@ export async function settlePayment(
     const r = await lockRequest(id, db);
     const actor = await paymentActor(actorId, db);
     requireCondition(hasPermission(actor, "settlements"));
+    const [hosted] = await rows("SELECT id FROM provider_checkouts WHERE request_id=?",[id],db);
+    requireCondition(!hosted,"USE_PROVIDER_CHECKOUT");
     requireCondition(canSettle(r.status, status), "INVALID_STATE");
     if (status === "COMPLETED") {
       requireCondition(
@@ -803,6 +813,7 @@ export async function createBeneficiary(userId: string, input: unknown) {
   await validCurrency(v.currency);
   return atomic(async (db) => {
     await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [userId], db);
+    await checkUsageLimit(userId, "BENEFICIARIES", db);
     const id = randomUUID();
     await write(
       "INSERT INTO beneficiaries(id,user_id,name,method,currency,country_code,destination,status) VALUES (?,?,?,?,?,?,?,?)",
@@ -908,7 +919,7 @@ export async function paymentWorkspace(userId: string) {
     [userId, u.role, userId],
   );
   const methods = await rows(
-    "SELECT * FROM payment_methods WHERE active=1 OR ?=1",
+    "SELECT * FROM payment_methods WHERE active=1 OR ?=1 ORDER BY CASE code WHEN 'UNIONPAY' THEN 0 WHEN 'STRIPE' THEN 1 WHEN 'ALIPAY' THEN 2 WHEN 'WECHAT' THEN 3 WHEN 'PAYPAL' THEN 4 ELSE 5 END,name",
     [hasPermission(u, "payment-methods")],
   );
   // Only return events for requests the caller was allowed to see.
@@ -961,4 +972,14 @@ export async function previewPaymentRisk(userId: string, requestId: string) {
       };
     throw error;
   }
+}
+
+// Only the verified provider fulfillment path can credit hosted top-ups.
+export async function settleProviderTopup(c: Checkout, receipt: string, db: DB) {
+  const r=await lockRequest(c.request_id!,db);
+  requireCondition(r.user_id === c.user_id && r.kind === "TOPUP" && r.method === c.provider,"CHECKOUT_MISMATCH");
+  if(r.status === "COMPLETED") return;
+  requireCondition(r.status === "PROCESSING","INVALID_STATE");
+  await write("UPDATE financial_requests SET reference=? WHERE id=?",[receipt.slice(0,100),r.id],db);
+  await finish(r,c.user_id,`${c.provider} ${c.environment || "sandbox"} payment verified.`,db);
 }
