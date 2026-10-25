@@ -20,6 +20,7 @@ import { createReminder } from "@/actions/alert.actions";
 import { formatMoney } from "@/lib/money";
 import type { Workspace } from "@/types/workspace";
 import type { Row } from "@/types";
+import { tuitionSchedule } from "@/lib/tuition-schedule";
 export function TuitionPage({ data }: { data: Workspace }) {
   const { t, locale, run } = useApp();
   const [editing, setEditing] = useState<Row | null>(null);
@@ -57,7 +58,8 @@ export function TuitionPage({ data }: { data: Workspace }) {
                 due_date: new Date(Date.now() + 86400000 * 60)
                   .toISOString()
                   .slice(0, 10),
-                semester: "",
+                semester: "", programme: "", funding_needs: "0", payment_schedule: "ONE_OFF", installments: "1",
+                first_due_date: new Date(Date.now() + 86400000 * 60).toISOString().slice(0,10),
               })
             }
           >
@@ -78,6 +80,12 @@ export function TuitionPage({ data }: { data: Workspace }) {
           value={fmt(gap?.monthlyTarget || 0)}
         />
       </div>
+      {gap&&<Card><h2>{t("familyFunding")}</h2><p>{t("manualPendingHelp")}</p>
+        <p>{t("tuitionEvidenceNotice")}</p>
+        {gap.pendingDeposits.map((r,i)=><p key={`deposit-${i}`}>{t("pendingDeposit")}: {r.amount} {r.currency} · {r.status}</p>)}
+        {gap.expectedSupport.map((r,i)=><p key={`support-${i}`}>{t("expectedSupport")}: {r.amount} {r.currency} · {r.status}</p>)}
+        <Link className="button secondary" href={`/${locale}/payments`}>{t("requestMoney")}</Link>
+      </Card>}
       <div className="two-grid">
         {data.tuition.map((i) => (
           <Card className="invoice-card" key={String(i.id)}>
@@ -88,6 +96,12 @@ export function TuitionPage({ data }: { data: Workspace }) {
               <Badge>{i.semester}</Badge>
             </div>
             <h2>{i.name}</h2>
+            <p>{i.programme}</p>
+            <p>{t("funding_needs")}: {fmt(String(i.funding_needs || 0), String(i.currency))}</p>
+            <p>{t(String(i.payment_schedule))} | {i.installments} {t("installments")} | {String(i.first_due_date).slice(0,10)} to {String(i.due_date).slice(0,10)}</p>
+            <div className="detail-list" aria-label={t("payment_schedule")}>
+              {tuitionSchedule({amount:String(i.amount),paid:String(i.paid),scholarship:String(i.scholarship),due_date:String(i.due_date),first_due_date:i.first_due_date?String(i.first_due_date):null,payment_schedule:String(i.payment_schedule),installments:Number(i.installments)}).map((payment,index)=><div key={index}><span>{payment.date}</span><strong>{fmt(payment.remaining,String(i.currency))} {t("remaining")}</strong></div>)}
+            </div>
             <p className="muted">
               {new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
                 new Date(String(i.due_date)),
@@ -135,6 +149,7 @@ export function TuitionPage({ data }: { data: Workspace }) {
       {gap && (
         <Card>
           <SectionTitle title={t("fundingPlanner")} />
+          <p>{t("nextTuitionPayment")}: {gap.nextPayment.date} · {fmt(gap.nextPayment.remaining, gap.currency)}</p>
           <p className="muted">{t("plannerHelp")}</p>
           <div className="planner-grid">
             <div>
@@ -224,9 +239,12 @@ export function TuitionPage({ data }: { data: Workspace }) {
             { name: "amount", type: "number", min: 0.01 },
             { name: "currency", options: currencyOptions },
             { name: "due_date", type: "date" },
-            { name: "paid", type: "number", min: 0 },
+            ...(data.user.is_demo ? [{ name: "paid", type: "number", min: 0 }] : []),
             { name: "scholarship", type: "number", min: 0 },
             { name: "semester" },
+            { name: "programme" }, { name: "funding_needs", type: "number", min: 0 },
+            { name: "payment_schedule", options: ["ONE_OFF","MONTHLY","TERM"].map(value=>({value,label:value})) },
+            { name: "first_due_date", type: "date" }, { name: "installments", type: "number", min: 1, max: 60, step: "1" },
           ]}
           initial={Object.fromEntries(
             Object.entries(editing).map(([k, v]) => [k, String(v ?? "")]),

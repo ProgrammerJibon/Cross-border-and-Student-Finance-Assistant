@@ -12,8 +12,9 @@ function key() {
 }
 export async function createSession(
   user: Pick<User, "id" | "session_version">,
+  mfa = false,
 ) {
-  const token = await new SignJWT({ version: user.session_version })
+  const token = await new SignJWT({ version: user.session_version, mfa })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
     .setIssuedAt()

@@ -15,6 +15,8 @@ import type { Result } from "@/types";
 import type { Locale } from "@/lib/config";
 import { updatePreferences } from "@/actions/preferences.actions";
 type AppContextType = {
+  fieldErrors: Record<string, string>;
+  setFieldErrors: (errors: Record<string, string>) => void;
   catalog: {
     currencies: { code: string; name: string; symbol: string }[];
     countries: { code: string; name: string; currency_code: string }[];
@@ -91,6 +93,7 @@ export function Providers({
     document.documentElement.lang = locale;
   }, [locale]);
   const [notice, setNotice] = useState({ message: "", error: false });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const t = (key: string) => dictionary[key] || key;
   const theme = useMemo(
@@ -136,9 +139,11 @@ export function Providers({
     options?: { quiet?: boolean; refresh?: boolean },
   ) => {
     try {
+      setFieldErrors({});
       const r = await fn();
       if (!r.success) {
-        toast(t(r.code), true);
+        setFieldErrors(r.fieldErrors || {});
+        toast(r.fieldErrors ? Object.entries(r.fieldErrors).map(([field, message]) => `${t(field)}: ${message}`).join(" ") : t(r.code), true);
         return undefined;
       }
       if (!options?.quiet) toast(t("success"));
@@ -161,7 +166,7 @@ export function Providers({
     <AppRouterCacheProvider>
       <ThemeProvider theme={theme}>
         <Context.Provider
-          value={{ locale, t, theme: mode, toggleTheme, run, toast, catalog }}
+          value={{ locale, t, theme: mode, toggleTheme, run, toast, catalog, fieldErrors, setFieldErrors }}
         >
           {children}
           <Snackbar

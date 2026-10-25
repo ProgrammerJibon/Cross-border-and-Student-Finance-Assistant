@@ -41,9 +41,9 @@ export async function saveCurrency(input: unknown) {
     const rates = await getRates();
     requireCondition(
       !["CNY", "BDT", "CAD"].includes(v.code) || v.active,
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"active": "Core currencies must remain active."},
     );
-    requireCondition(v.code !== "CNY" || D(v.rate).eq(1), "VALIDATION_ERROR");
+    requireCondition(v.code !== "CNY" || D(v.rate).eq(1), "FIELD_VALIDATION", {"rate": "The RMB reference rate must equal 1."});
     if (!v.active)
       requireCondition(
         !(
@@ -52,7 +52,7 @@ export async function saveCurrency(input: unknown) {
             [v.code],
           )
         ).length,
-        "VALIDATION_ERROR",
+        "FIELD_VALIDATION", {"active": "This currency is used by an active country."},
       );
     await atomic(async (db) => {
       await write(
@@ -130,7 +130,7 @@ export async function saveAiModel(input: unknown) {
       requireCondition(!v.id || old, "NOT_FOUND");
       requireCondition(
         old || (v.key && v.key.length >= 10),
-        "VALIDATION_ERROR",
+        "FIELD_VALIDATION", {"key": "A new model requires an API key of at least 10 characters."},
       );
       if (old) {
         await write(
@@ -148,7 +148,7 @@ export async function saveAiModel(input: unknown) {
           db,
         );
         if (v.key) {
-          requireCondition(v.key.length >= 10, "VALIDATION_ERROR");
+          requireCondition(v.key.length >= 10, "FIELD_VALIDATION", {"key": "The API key must contain at least 10 characters."});
           await write(
             "UPDATE ai_models SET key_cipher=?,key_last_four=? WHERE id=?",
             [encryptSecret(v.key), v.key.slice(-4), key],
@@ -288,7 +288,7 @@ export async function saveTeamMember(input: unknown) {
     const hash = v.password
       ? await bcrypt.hash(z.string().min(10).parse(v.password), 12)
       : null;
-    requireCondition(v.id || hash, "VALIDATION_ERROR");
+    requireCondition(v.id || hash, "FIELD_VALIDATION", {"password": "A new account requires a password."});
     await atomic(async (db) => {
       if (v.id) {
         const [target] = await rows(

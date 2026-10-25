@@ -51,6 +51,8 @@ export async function write(sql: string, values: SqlValue[] = [], db?: DB) {
 export async function atomic<T>(fn: (db: DB) => Promise<T>): Promise<T> {
   const db = await pool.getConnection();
   try {
+    // Avoid stale authorization snapshots after waiting for a financial row lock.
+    await db.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
     await db.beginTransaction();
     const result = await fn(db);
     await db.commit();

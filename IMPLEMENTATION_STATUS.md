@@ -1,4 +1,22 @@
-# Implementation status
+# Current finance verification — 2026-10-25
+
+The current scope is same-environment internal transfers, Gateway/Manual Add Money,
+admin-managed withdrawals, and family/tuition planning. Demo workflows are implemented;
+Live wallet execution remains disabled pending trusted settlement adapters and external
+financial authorization. See [the requirement matrix and release report](docs/FINANCE_RELEASE_READINESS.md)
+for implementation gaps and deployment restrictions.
+
+Latest checks: 37 unit tests passed; 43 isolated integration tests passed with one live
+Gemini test skipped; four focused browser tests passed; TypeScript, lint, production
+build/standalone packaging and dependency audit passed. Local additive migration and
+protected Live admin provisioning completed after a restricted-access backup. Password
+rotation and MFA are required. Local ledger reconciliation found zero discrepancies;
+external settlement is not verified. The entire historical browser suite was not rerun.
+
+The seven requested payment-brand logos appear only on the localized landing page
+reached from `/`, with accurate availability copy.
+
+# Historical implementation status
 
 Updated 2026-10-14. Continued the existing repository without regenerating completed features.
 

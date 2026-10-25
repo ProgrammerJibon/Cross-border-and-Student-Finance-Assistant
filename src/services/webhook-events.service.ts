@@ -36,3 +36,18 @@ export async function recordProviderException(processor: string, environment: En
   await write("INSERT IGNORE INTO financial_reconciliation_issues(id,environment,processor,external_id,issue_type) VALUES (?,?,?,?,?)",
     [randomUUID(),environment,processor,externalId,type.slice(0,80)]);
 }
+
+// Only authenticated terminal provider events call this. A browser cancel URL
+// never proves that a provider order can no longer be paid.
+export async function failProviderTopup(processor: string, environment: Environment, remote: string, status: "FAILED" | "CANCELLED") {
+  const [preview]=await rows<{id:string;user_id:string}>("SELECT id,user_id FROM provider_checkouts WHERE provider=? AND environment=? AND remote_id=? AND purpose='TOPUP'",[processor,environment,remote]);
+  if(!preview)return;
+  await atomic(async db=>{
+    await rows("SELECT id FROM users WHERE id=? FOR UPDATE",[preview.user_id],db);
+    const [c]=await rows<{status:string;request_id:string}>("SELECT status,request_id FROM provider_checkouts WHERE id=? FOR UPDATE",[preview.id],db);
+    if(c.status!=="CREATED")return;
+    await write("UPDATE provider_checkouts SET status=? WHERE id=?",[status,preview.id],db);
+    await write("UPDATE financial_requests SET status=? WHERE id=? AND status='PROCESSING'",[status,c.request_id],db);
+    await write("INSERT INTO financial_events(id,request_id,actor_id,status,note) VALUES (?,?,?,?,?)",[randomUUID(),c.request_id,preview.user_id,status,"Authenticated provider checkout event"],db);
+  });
+}

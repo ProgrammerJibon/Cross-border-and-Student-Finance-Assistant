@@ -35,7 +35,7 @@ export function WorkspaceFrame({
     return children;
   return (
     <Shell key={user.id} user={user} notifications={notifications}>
-      <div className="notification-guidance" role="status">{t(user.is_demo ? "demoEnvironmentNotice" : "liveEnvironmentNotice")}</div>
+      {!!user.is_demo && <div className="notification-guidance" role="status">{t("demoEnvironmentNotice")}</div>}
       {children}
     </Shell>
   );

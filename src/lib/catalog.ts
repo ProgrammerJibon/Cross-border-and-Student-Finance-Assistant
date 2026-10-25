@@ -21,7 +21,7 @@ export async function validCurrency(code: string, db?: DB) {
         db,
       )
     ).length,
-    "VALIDATION_ERROR",
+    "FIELD_VALIDATION", {"currency": "Select an active, supported currency."},
   );
 }
 export async function validCountry(code: string, db?: DB) {
@@ -33,6 +33,6 @@ export async function validCountry(code: string, db?: DB) {
         db,
       )
     ).length,
-    "VALIDATION_ERROR",
+    "FIELD_VALIDATION", {"country_code": "Select an active, supported country."},
   );
 }

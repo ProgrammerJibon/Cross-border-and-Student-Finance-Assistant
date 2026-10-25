@@ -10,6 +10,8 @@ import { audit } from "@/lib/audit";
 import type { User, Role } from "@/types";
 import { avatarSchema } from "@/lib/avatar";
 import { validCurrency, validCountry } from "@/lib/catalog";
+import { verifyTotp } from "@/lib/totp";
+import { decryptSecret } from "@/lib/secrets";
 const credentials = z.object({
   email: z
     .email()
@@ -33,7 +35,7 @@ async function throttle(identifier: string) {
 }
 export async function login(input: unknown) {
   return action(async () => {
-    const v = credentials.parse(input);
+    const v = credentials.extend({password:z.string().min(1).max(72),mfa:z.string().max(6).optional()}).parse(input);
     await throttle(v.email);
     const [u] = await rows<User & { password_hash: string; status: string }>(
       "SELECT u.*,p.language FROM users u JOIN user_preferences p ON p.user_id=u.id WHERE email=?",
@@ -48,7 +50,13 @@ export async function login(input: unknown) {
       u && valid && u.status === "ACTIVE",
       "INVALID_CREDENTIALS",
     );
-    await createSession(u);
+    if(u.mfa_enabled) await atomic(async db=>{
+      const [r]=await rows<{mfa_secret:string;mfa_last_step:number}>("SELECT mfa_secret,mfa_last_step FROM users WHERE id=? FOR UPDATE",[u.id],db);
+      const step=verifyTotp(decryptSecret(r.mfa_secret),v.mfa||"",r.mfa_last_step);
+      requireCondition(step!==null,"INVALID_MFA_CODE");
+      await write("UPDATE users SET mfa_last_step=? WHERE id=?",[step,u.id],db);
+    });
+    await createSession(u,!!u.mfa_enabled);
     await audit(u.id, "LOGIN", "users", u.id);
     return { role: u.role, locale: u.language, onboarded: u.onboarded };
   });
@@ -66,9 +74,10 @@ export async function register(input: unknown) {
         preferred_currency: z.string().length(3),
         avatar: avatarSchema,
       })
-      .refine((v) => v.password === v.confirm)
+      .refine((v) => v.password === v.confirm, { path: ["confirm"], message: "Passwords must match." })
       .parse(input);
     await throttle(v.email);
+    requireCondition(v.email!=="jibon@jibon.bd","EMAIL_RESERVED");
     await validCountry(v.country_code);
     await validCurrency(v.preferred_currency);
     const userId = randomUUID();
@@ -158,7 +167,7 @@ export async function changePassword(input: unknown) {
         password: z.string().min(10).max(72),
         confirm: z.string(),
       })
-      .refine((v) => v.password === v.confirm)
+      .refine((v) => v.password === v.confirm, { path: ["confirm"], message: "Passwords must match." })
       .parse(input);
     const [r] = await rows<{ password_hash: string }>(
       "SELECT password_hash FROM users WHERE id=?",

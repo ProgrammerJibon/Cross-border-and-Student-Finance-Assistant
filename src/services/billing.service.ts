@@ -85,6 +85,7 @@ export async function fulfillCheckout(id: string, owner?: string) {
       if(locked.status === "COMPLETED" && locked.renewal_status === "CANCELLED") return;
     }
     if (checkout.purpose === "TOPUP") {
+      await write("INSERT INTO provider_topup_receipts(processor,environment,receipt,checkout_id) VALUES (?,?,?,?)",[checkout.provider === "PAYPAL" ? "PAYPAL" : "STRIPE",checkout.environment!,receipt,checkout.id],db);
       await settleProviderTopup(checkout, receipt, db);
       await write("UPDATE provider_checkouts SET status='COMPLETED',receipt=?,completed_at=UTC_TIMESTAMP() WHERE id=?",[receipt,id],db);
       return;

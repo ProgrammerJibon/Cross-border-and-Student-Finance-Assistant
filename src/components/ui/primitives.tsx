@@ -163,22 +163,24 @@ export function FormFields({
   values: Record<string, string>;
   setValues: (v: Record<string, string>) => void;
 }) {
-  const { t, catalog } = useApp();
+  const { t, catalog, fieldErrors, setFieldErrors } = useApp();
   return (
     <div className="form-grid">
       {fields.map((f) => (
         <TextField
           key={f.name}
+          name={f.name}
           label={t(f.label || f.name)}
           value={values[f.name] ?? ""}
-          onChange={(e) => setValues({ ...values, [f.name]: e.target.value })}
+          onChange={(e) => { setFieldErrors({ ...fieldErrors, [f.name]: "" }); setValues({ ...values, [f.name]: e.target.value }); }}
           select={!!f.options}
           type={f.type || "text"}
           required={f.required !== false}
           fullWidth
           multiline={f.type === "textarea"}
           minRows={f.type === "textarea" ? 3 : undefined}
-          helperText={f.help ? t(f.help) : undefined}
+          error={!!fieldErrors[f.name]}
+          helperText={fieldErrors[f.name] || (f.help ? t(f.help) : undefined)}
           slotProps={{
             inputLabel: { shrink: true },
             htmlInput: {
@@ -196,6 +198,7 @@ export function FormFields({
             "preferred_currency",
             "home_currency",
             "study_currency",
+            "tuition_currency",
             "source",
             "target",
           ].includes(f.name)

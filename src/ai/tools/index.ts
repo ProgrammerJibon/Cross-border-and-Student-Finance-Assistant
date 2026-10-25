@@ -29,6 +29,7 @@ import {
 import { canUseAgentTool } from "../tool-policy";
 import type { Role } from "@/types";
 import { getRiskPolicy } from "@/services/financial-config.service";
+import { eligibleRecipients, discoverRecipients } from "@/services/recipient.service";
 const empty = z.object({}).strict();
 const comparison = z
   .object({
@@ -41,6 +42,9 @@ const comparison = z
   })
   .strict();
 export const toolSchemas = {
+  getEligibleFamily:empty,
+  discoverRecipients:z.object({query:z.string().min(3).max(190)}).strict(),
+  getFamilyFunding:empty,
   calculate: z
     .object({
       operation: z.enum(["add", "subtract", "multiply", "divide"]),
@@ -163,7 +167,7 @@ export async function runTool(
       case "searchTransactions": {
         const v = toolSchemas.searchTransactions.parse(args);
         const data = await rows(
-          "SELECT id,account_id,description,amount,currency,category,type,date FROM transactions WHERE user_id=? AND description LIKE ? ORDER BY date DESC,id DESC LIMIT 51 OFFSET " +
+          "SELECT id,account_id,description,amount,currency,category,type,date FROM finance_records WHERE user_id=? AND description LIKE ? ORDER BY date DESC,id DESC LIMIT 51 OFFSET " +
             v.page * 50,
           [userId, `%${v.search}%`],
         );
@@ -174,6 +178,9 @@ export async function runTool(
         };
         break;
       }
+      case "getEligibleFamily": output=await eligibleRecipients(userId);break;
+      case "discoverRecipients": output=await discoverRecipients(userId,toolSchemas.discoverRecipients.parse(args).query);break;
+      case "getFamilyFunding": output=await rows("SELECT id,student_id,parent_id,amount,currency,reason,status,payment_id,expires_at FROM family_funding_requests WHERE student_id=? OR parent_id=? ORDER BY created_at DESC LIMIT 50",[userId,userId]);break;
       case "getActivity":
         output = await rows(
           "SELECT action,entity_type,entity_id,created_at FROM audit_logs WHERE actor_id=? ORDER BY created_at DESC LIMIT 100",
@@ -264,7 +271,7 @@ export async function runTool(
           liveMoneyMovementAvailable: false,
           confirmationRequired: true,
           instruction:
-            "Use draftPayment with verified account IDs. Card details must be collected only by the secure payment form, never in chat. Drafts require the user confirmation button; external methods enter manual settlement.",
+            "Only internal sends to approved beneficiaries or accepted family are supported. Use getEligibleFamily and getBeneficiaries. For Add Money (Stripe/PayPal gateway or manual deposit) and external manual withdrawal, open payments and collect destination details only in its secure form. Live money is disabled. Pending deposits are not available funds. Never request credentials or payout identifiers in chat.",
         };
         break;
       }
@@ -341,7 +348,7 @@ export async function runTool(
         break;
       case "analyseTransactions":
         output = await rows(
-          "SELECT category,currency,type,SUM(amount) total,COUNT(*) count FROM transactions WHERE user_id=? AND date>=DATE_SUB(UTC_DATE(),INTERVAL 30 DAY) GROUP BY category,currency,type",
+          "SELECT category,currency,type,SUM(amount) total,COUNT(*) count FROM finance_records WHERE user_id=? AND date>=DATE_SUB(UTC_DATE(),INTERVAL 30 DAY) GROUP BY category,currency,type",
           [userId],
         );
         break;

@@ -95,6 +95,7 @@ export function TransactionsPage({ data }: { data: Workspace }) {
   };
   return (
     <>
+      <p>{t("budgetRecordHelp")}</p>
       <Heading
         title={t("transactions")}
         action={
@@ -203,6 +204,7 @@ export function TransactionsPage({ data }: { data: Workspace }) {
             rows={result?.rows || data.transactions}
             columns={[
               { key: "description" },
+              { key: "record_source", label: "recordSource", render: r => t(String(r.record_source || "LEDGER")) },
               { key: "category", render: (r) => t(String(r.category)) },
               {
                 key: "date",
@@ -315,6 +317,7 @@ function CsvImport({
   const [result, setResult] = useState<{
     imported: number;
     invalidRows: number[];
+    invalidFields?: {row:number;fields:string[]}[];
   } | null>(null);
   const [busy, setBusy] = useState(false);
   return (
@@ -396,6 +399,7 @@ function CsvImport({
               {result.invalidRows.join(", ") || 0}
             </p>
           )}
+          {result?.invalidFields?.map(row=><p role="alert" key={row.row}>{t("invalidRows")} {row.row}: {row.fields.map(t).join(", ")}</p>)}
         </>
       )}
     </Modal>

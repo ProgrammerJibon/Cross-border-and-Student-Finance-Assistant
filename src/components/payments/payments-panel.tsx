@@ -1,4 +1,5 @@
 "use client";
+import { WalletWorkspace } from "./wallet-workspace";
 import { HostedCheckout, PaymentVerification } from "@/components/billing/hosted-checkout";
 import { GatewaySettings } from "./gateway-settings";
 import { formatDate } from "@/lib/dates";
@@ -43,7 +44,10 @@ const booleanOptions = [
   { value: "1", label: "active" },
   { value: "0", label: "disabled" },
 ];
-export function PaymentsPanel({
+export function PaymentsPanel(props: Parameters<typeof LegacyPaymentsPanel>[0]) {
+  return props.focusId ? <LegacyPaymentsPanel {...props}/> : <WalletWorkspace {...props}/>;
+}
+export function LegacyPaymentsPanel({
   data,
   mode = "payments",
   compact = false,

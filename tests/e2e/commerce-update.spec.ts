@@ -45,8 +45,8 @@ test("Live checkout has no sandbox switch and unapproved money movement is disab
     await expect(page.getByRole("radio").first()).toBeDisabled();
     await expect(page.getByRole("button",{name:"Continue to secure checkout",exact:true})).toBeDisabled();
     await page.goto("/en/payments");
-    await expect(page.getByRole("button",{name:"Add money",exact:true})).toBeDisabled();
-    await expect(page.getByText(/Live funding, transfers and payouts are unavailable/)).toBeVisible();
+    await expect(page.getByRole("button",{name:/Add money/i}).first()).toBeEnabled();
+    await expect(page.getByText(/Live money movement is unavailable/)).toBeVisible();
   }finally{
     for(const table of ["notifications","generated_alerts","alerts","accounts","subscriptions","user_preferences"]) await db.execute(`DELETE FROM ${table} WHERE user_id=?`,[id]);
     await db.execute("DELETE FROM audit_logs WHERE actor_id=?",[id]);await db.execute("DELETE FROM auth_attempts WHERE identifier=?",[email]);await db.execute("DELETE FROM users WHERE id=?",[id]);await db.end();

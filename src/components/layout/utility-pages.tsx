@@ -36,6 +36,7 @@ import { submitReport } from "@/actions/report.actions";
 import { updatePreferences } from "@/actions/preferences.actions";
 import {
   updateProfile,
+  updateStudentProfile,
   exportMyData,
   clearDemoData,
   closeAccount,
@@ -494,11 +495,16 @@ export function ReportsPage({ data }: { data: Workspace }) {
     </>
   );
 }
+import { AdminSecurity } from "@/components/forms/admin-security";
+import { studentStatusOptions } from "@/lib/student-profile";
 export function SettingsPage({ data }: { data: Workspace }) {
   const { t, locale, run, theme, toggleTheme, catalog } = useApp();
   const router = useRouter();
   const [form, setForm] = useState<Record<string, string>>({
     name: data.user.name,
+    student_status: String(data.profile[0]?.student_status || "FULL_TIME"),
+    home_country: String(data.profile[0]?.home_country || "Bangladesh"),
+    study_country: String(data.profile[0]?.study_country || "China"),
     preferred_currency: data.user.preferred_currency,
     timezone: data.user.timezone,
     country_code: data.user.country_code,
@@ -508,6 +514,7 @@ export function SettingsPage({ data }: { data: Workspace }) {
   return (
     <>
       <Heading title={t("settings")} />
+      {data.user.mfa_enabled ? <p role="status">{t("mfaEnabled")}</p> : <AdminSecurity rotate={false} />}
       <div className="two-grid">
         <Card>
           <h2>{t("profile")}</h2>
@@ -515,6 +522,10 @@ export function SettingsPage({ data }: { data: Workspace }) {
             onSubmit={async (e) => {
               e.preventDefault();
               setBusy(true);
+              if (data.user.role === "STUDENT") {
+                const saved = await run(() => updateStudentProfile(form));
+                if (saved === undefined) { setBusy(false); return; }
+              }
               if (data.user.role !== "MODERATOR")
                 await run(() => updateProfile(form.name));
               await run(
@@ -542,6 +553,10 @@ export function SettingsPage({ data }: { data: Workspace }) {
                 },
                 { name: "preferred_currency", options: currencyOptions },
                 { name: "timezone" },
+                ...(data.user.role === "STUDENT" ? [
+                  {name:"student_status",options:studentStatusOptions},
+                  ...["home_country","study_country"].map(name=>({name,options:catalog.countries.map(c=>({value:c.name,label:c.name}))}))
+                ] : []),
               ]}
               values={form}
               setValues={(v) =>

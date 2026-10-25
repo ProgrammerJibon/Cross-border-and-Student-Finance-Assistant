@@ -137,7 +137,7 @@ export async function agentWorkspaceData(userId: string, topic: string) {
     budgets:
       "SELECT * FROM budgets WHERE user_id=? ORDER BY month DESC LIMIT 100",
     transactions:
-      "SELECT id,account_id,description,amount,currency,category,type,date FROM transactions WHERE user_id=? ORDER BY date DESC LIMIT 50",
+      "SELECT id,account_id,description,amount,currency,category,type,date FROM finance_records WHERE user_id=? ORDER BY date DESC LIMIT 50",
     alerts:
       "SELECT id,type,detail,status FROM alerts WHERE user_id=? AND status NOT IN ('DISMISSED','RESOLVED') AND NOT EXISTS (SELECT 1 FROM generated_alerts g WHERE g.alert_id=alerts.id AND g.source_student IS NOT NULL) ORDER BY created_at DESC LIMIT 50",
     subscriptions:

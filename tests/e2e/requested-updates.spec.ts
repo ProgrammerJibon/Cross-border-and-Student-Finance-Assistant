@@ -19,7 +19,7 @@ test("landing banner persists, language menu uses SVG, payment logos and favicon
   await page.keyboard.press("Escape");
   await expect(page.locator(".language-flag")).toHaveCount(0);
   await expect(page.locator(".supported-payments .payment-logo")).toHaveCount(
-    4,
+    7,
   );
   const icon = await page
     .locator('link[rel="icon"]')

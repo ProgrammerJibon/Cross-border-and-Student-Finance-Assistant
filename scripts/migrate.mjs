@@ -6,6 +6,8 @@ import { migrateAgent } from "./agent-migration.mjs";
 import { migrateCommerce } from "./commerce-migration.mjs";
 import { migrateBilling } from "./billing-migration.mjs";
 import { migrateFinancialIsolation } from "./financial-isolation-migration.mjs";
+import { migrateWalletWorkflows } from "./wallet-workflows-migration.mjs";
+import { migrateRequestedChanges } from "./requested-changes-migration.mjs";
 
 export async function migrate(db) {
   await migratePlatform(db);
@@ -14,6 +16,8 @@ export async function migrate(db) {
   await migrateBilling(db);
   await migrateCommerce(db);
   await migrateFinancialIsolation(db);
+  await migrateWalletWorkflows(db);
+  await migrateRequestedChanges(db);
   await db.execute(`CREATE TABLE IF NOT EXISTS notification_devices (
     user_id VARCHAR(64) NOT NULL, device_id CHAR(36) NOT NULL,
     scope VARCHAR(1000) NOT NULL, permission VARCHAR(20) NOT NULL,

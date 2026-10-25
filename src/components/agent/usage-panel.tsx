@@ -1,4 +1,5 @@
 "use client";
+import { resultMessage } from "@/lib/result-message";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAgentUsage } from "@/actions/agent.actions";
@@ -20,7 +21,7 @@ export function AgentUsagePanel({ revision }: { revision: string }) {
           if (r.success) {
             setUsage(r.data);
             setError("");
-          } else setError(r.code);
+          } else setError(resultMessage(r));
         }
       })
       .catch(() => {

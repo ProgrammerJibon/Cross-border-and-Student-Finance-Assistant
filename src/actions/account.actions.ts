@@ -22,7 +22,7 @@ export async function saveAccount(input: unknown) {
           db,
         );
         requireCondition(a, "NOT_FOUND");
-        requireCondition(a.currency === v.currency, "VALIDATION_ERROR");
+        requireCondition(a.currency === v.currency, "FIELD_VALIDATION", {"currency": "An existing account currency cannot be changed."});
         requireCondition(
           (a.type === "CASH") === (v.type === "CASH"),
           "USE_WALLET_ACCOUNT",
@@ -53,13 +53,15 @@ export async function archiveAccount(accountId: string) {
     requireCondition(["STUDENT", "PARENT"].includes(u.role));
     id.parse(accountId);
     await atomic(async (db) => {
-      const [a] = await rows<{ balance: string; recorded_balance: string }>(
-        "SELECT balance,recorded_balance FROM accounts WHERE id=? AND user_id=? FOR UPDATE",
+      const [a] = await rows<{ balance: string; recorded_balance: string; reserved_balance:string }>(
+        "SELECT balance,recorded_balance,reserved_balance FROM accounts WHERE id=? AND user_id=? FOR UPDATE",
         [accountId, u.id],
         db,
       );
       requireCondition(a, "NOT_FOUND");
       requireCondition(Number(a.balance) === 0 && Number(a.recorded_balance) === 0, "ACCOUNT_NOT_EMPTY");
+      requireCondition(Number(a.reserved_balance)===0,"ACCOUNT_NOT_EMPTY");
+      requireCondition(!(await rows("SELECT id FROM wallet_operations WHERE account_id=? AND status NOT IN ('COMPLETED','REJECTED','CANCELLED')",[accountId],db)).length,"INVALID_STATE");
       requireCondition(
         !(
           await rows(

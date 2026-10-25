@@ -1,4 +1,5 @@
 "use client";
+import { resultMessage } from "@/lib/result-message";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FiArrowRight } from "react-icons/fi";
@@ -17,7 +18,7 @@ export function DemoProfiles() {
   useEffect(() => {
     void demoProfiles().then((r) => {
       if (r.success) setProfiles(r.data);
-      else setError(r.code);
+      else setError(resultMessage(r));
     });
   }, []);
 

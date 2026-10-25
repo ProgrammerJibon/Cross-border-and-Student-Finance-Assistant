@@ -12,10 +12,7 @@ test("Free/Premium demos, PayPal-first checkout, footer methods and editable age
   await expect(
     page.getByRole("heading", { name: "Student Premium", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".supported-payments li").first()).toHaveText(
-    "PayPal",
-  );
-  await expect(page.locator(".supported-payments")).toContainText("UnionPay");
+  await expect(page.locator(".supported-payments")).toHaveCount(0);
   await page.goto("/en/demo");
   await expect(page.locator(".demo-profile")).toHaveCount(4);
   await page

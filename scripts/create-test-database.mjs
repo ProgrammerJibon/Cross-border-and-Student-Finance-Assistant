@@ -15,8 +15,12 @@ try {
   await db.execute("INSERT INTO accounts(id,user_id,name,type,currency,balance) VALUES ('legacy-wallet','legacy-test','Legacy','BANK','USD',125)");
   await db.execute("INSERT INTO financial_requests(id,user_id,account_id,kind,method,amount,currency,recipient,destination,receive_amount,receive_currency,fx_rate,status,idempotency_key) VALUES ('legacy-request','legacy-test','legacy-wallet','TOPUP','BANK',10,'USD','','',10,'USD',1,'PROCESSING','legacy-request')");
   process.env.DEMO_MODE="true";
+  process.env.AI_KEY_ENCRYPTION_SECRET="isolated-test-encryption-secret-at-least-32-characters";
   await migrate(db);
+  await db.execute("UPDATE users SET discoverable=0 WHERE id='demo-student'");
   await migrate(db);
+  const [privacy]=await db.execute("SELECT discoverable FROM users WHERE id='demo-student'");
+  if(Number(privacy[0]?.discoverable)!==0) throw new Error("Migration changed discovery consent");
   const [legacy] = await db.execute("SELECT balance,legacy_unverified_balance FROM accounts WHERE id='legacy-wallet'");
   if (Number(legacy[0].balance)!==0 || Number(legacy[0].legacy_unverified_balance)!==125) throw new Error("Migration preservation failed");
   await mkdir(".local",{recursive:true});

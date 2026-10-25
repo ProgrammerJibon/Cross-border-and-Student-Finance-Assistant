@@ -51,8 +51,8 @@ function Flag({ locale }: { locale: Locale }) {
   );
 }
 const languages: { value: Locale; label: string }[] = [
-  { value: "en", label: "EN" },
-  { value: "zh-CN", label: "中文" },
+  { value: "en", label: "English" },
+  { value: "zh-CN", label: "简体中文" },
   { value: "bn-BD", label: "বাংলা" },
 ];
 export function LanguagePicker({
@@ -73,7 +73,8 @@ export function LanguagePicker({
         width: "auto",
         padding: 0,
         "& fieldset": { border: "0 !important" },
-        "&.Mui-focused": { backgroundColor: "action.hover" },
+        "&.Mui-focused": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 },
+        "& .MuiSelect-select:focus": { backgroundColor: "transparent" },
         "& .MuiSelect-select": { py: 0.8, pl: 1, pr: "28px !important" },
       }}
       value={locale}

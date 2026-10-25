@@ -12,6 +12,10 @@ async function dispatch(
   v: Record<string, unknown>,
 ): Promise<Result<unknown>> {
   switch (name) {
+    case "requestSupport":
+      return (await import("./wallet.actions")).requestSupport(v,`agent-support:${crypto.randomUUID()}`);
+    case "decideSupport":
+      return (await import("./wallet.actions")).decideSupport(String(v.request_id),String(v.decision));
     case "decideApproval":
       return (await import("./parent.actions")).decideApproval(v);
     case "settlePaymentRequest":

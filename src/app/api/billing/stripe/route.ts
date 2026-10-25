@@ -1,4 +1,4 @@
-import { processWebhook, recordProviderException } from "@/services/webhook-events.service";
+import { processWebhook, recordProviderException, failProviderTopup } from "@/services/webhook-events.service";
 import { verifyStripeSignature, type Checkout } from "@/services/checkout-provider.service";
 import { gatewayConfig } from "@/services/gateway-config.service";
 import { fulfillCheckout } from "@/services/billing.service";
@@ -19,6 +19,9 @@ export async function POST(request: Request) {
     await processWebhook("STRIPE", environment, event.id, event.type, body, async () => {
       if (/refund|dispute|reversed|denied|failed/i.test(event.type)) await recordProviderException("STRIPE", environment, event.id, event.type);
     const object=event.data?.object;
+    if(["checkout.session.async_payment_failed","checkout.session.expired"].includes(event.type) && typeof object?.id === "string") {
+      await failProviderTopup("STRIPE",environment,object.id,event.type.endsWith("expired")?"CANCELLED":"FAILED");
+    }
     let c: Checkout | undefined;
     if(["checkout.session.completed","checkout.session.async_payment_succeeded"].includes(event.type)) {
       [c]=await rows<Checkout>("SELECT * FROM provider_checkouts WHERE provider IN ('UNIONPAY','STRIPE','ALIPAY','WECHAT') AND environment=? AND remote_id=?",[environment,object.id]);

@@ -368,7 +368,6 @@ tbody tr:hover {
   max-width: 1200px;
   margin: 48px auto 0;
   padding: 28px 24px;
-  border-top: 1px solid var(--border);
   text-align: center;
 }
 .supported-payments > div,
@@ -397,9 +396,8 @@ tbody tr:hover {
   min-width: 106px;
   min-height: 42px;
   padding: 8px 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+  border: 0;
+  background: transparent;
   font-weight: 750;
   font-size: 16px;
 }
@@ -749,3 +747,25 @@ textarea:focus, textarea:focus-visible, .MuiSelect-select:focus,
 input, select, textarea { transition: border-color .15s ease; }
 .language-select { border: 0 !important; }
 .language-select fieldset { border: 0 !important; }
+
+/* Shared form rhythm for account, payment, onboarding and admin screens. */
+form > .button, form > .button-group, form > .between { margin-block: 1rem; }
+form > .two-grid { margin-block: 1.25rem; row-gap: 1.5rem; }
+form > .two-grid > label { display: grid; gap: .5rem; min-width: 0; }
+form > .two-grid input { width: 100%; min-width: 0; box-sizing: border-box; }
+.button-group, .between { gap: .75rem; flex-wrap: wrap; }
+.MuiDialogActions-root { gap: .75rem; padding: 1rem 1.5rem !important; flex-wrap: wrap; }
+.form-grid .MuiFormHelperText-root { margin-inline: 0; overflow-wrap: anywhere; }
+.card, .payments-panel, .two-grid > *, .three-grid > * { min-width: 0; }
+.card code { overflow-wrap: anywhere; }
+.language-select, .public-header .language-select { width: auto !important; min-width: 125px !important; flex-shrink: 0; }
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: minmax(0, 1fr); row-gap: 1.5rem; }
+  .public-header { flex-wrap: wrap; gap: .75rem; }
+  .button-group > .button { white-space: normal; text-align: center; }
+  .topbar { gap: .5rem; padding-inline: .75rem; }
+  .topbar-left { min-width: 0; }
+  .topbar-actions { flex-shrink: 0; }
+  .topbar .breadcrumb { display: none; }
+  .card p { overflow-wrap: anywhere; }
+}

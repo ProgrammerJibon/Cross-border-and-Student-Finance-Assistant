@@ -1,4 +1,5 @@
 "use client";
+import { resultMessage } from "@/lib/result-message";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AgentActionReview, type ProposedAction } from "./action-review";
@@ -140,7 +141,7 @@ export function AgentPage({ data }: { data: Workspace }) {
     async (id: string) => {
       const saved = await getAgentConversation(id);
       if (!saved.success) {
-        setError(saved.code);
+        setError(resultMessage(saved));
         return;
       }
       setThread(saved.data);
@@ -265,7 +266,7 @@ export function AgentPage({ data }: { data: Workspace }) {
             return [{ ...last }, ...c];
           });
         }
-        setError(r.code);
+        setError(resultMessage(r));
         if (r.code === "AI_RATE_LIMITED") {
           setRateLimitCountdown(60);
         } else {
@@ -460,7 +461,7 @@ export function AgentPage({ data }: { data: Workspace }) {
                       ]);
                       setHistoryPage((p) => p + 1);
                       setHasMore(r.data.hasMore);
-                    } else setError(r.code);
+                    } else setError(resultMessage(r));
                   } finally {
                     setHistoryBusy(false);
                   }

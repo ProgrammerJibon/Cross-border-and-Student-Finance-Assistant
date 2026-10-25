@@ -302,7 +302,7 @@ export function PublicPage({
           </Card>
         )}
       </main>
-      <SupportedPaymentMethods />
+      {page === "home" && <SupportedPaymentMethods />}
       <footer className="public-footer">
         <div className="footer-brand">
           <Brand />

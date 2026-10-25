@@ -6,6 +6,10 @@ import { recordProviderException } from "./webhook-events.service";
 // discrepancy is repaired by minting money or editing historical entries.
 export async function reconcileFinancialIntegrity() {
   const discrepancies: {environment: "live" | "sandbox"; processor: string; id: string; type: string}[] = [];
+  const journal=await rows<{operation_id:string;environment:string}>("SELECT j.operation_id,o.environment FROM wallet_journal j JOIN wallet_operations o ON o.id=j.operation_id GROUP BY j.operation_id,o.environment,j.phase,j.currency HAVING SUM(IF(j.direction='DEBIT',j.amount,-j.amount))<>0");
+  discrepancies.push(...journal.map(r=>({environment:r.environment==='DEMO'?'sandbox' as const:'live' as const,processor:'LEDGER',id:r.operation_id,type:'UNBALANCED_WALLET_JOURNAL'})));
+  const reserves=await rows<{id:string;financial_environment:string}>("SELECT a.id,a.financial_environment FROM accounts a WHERE a.reserved_balance<>(SELECT COALESCE(SUM(o.amount),0) FROM wallet_operations o WHERE o.account_id=a.id AND o.kind='WITHDRAWAL_MANUAL' AND o.status IN ('WAITING_PARENT','PENDING_REVIEW','PROCESSING','PAID_PENDING_VERIFICATION'))+(SELECT COALESCE(SUM(r.amount),0) FROM financial_requests r WHERE r.account_id=a.id AND r.held=1 AND r.financial_environment='DEMO')");
+  discrepancies.push(...reserves.map(r=>({environment:r.financial_environment==='DEMO'?'sandbox' as const:'live' as const,processor:'LEDGER',id:r.id,type:'WITHDRAWAL_RESERVATION_MISMATCH'})));
   const liveBalances=await rows<{id:string}>("SELECT a.id FROM accounts a JOIN users u ON u.id=a.user_id WHERE u.is_demo=0 AND a.balance<>0");
   discrepancies.push(...liveBalances.map(r=>({environment:"live" as const,processor:"LEDGER",id:r.id,type:"UNVERIFIED_LIVE_BALANCE"})));
   const entries=await rows<{request_id:string;financial_environment:string}>("SELECT request_id,financial_environment FROM financial_ledger_entries GROUP BY request_id,financial_environment,phase,currency HAVING SUM(IF(direction='DEBIT',amount,-amount))<>0");

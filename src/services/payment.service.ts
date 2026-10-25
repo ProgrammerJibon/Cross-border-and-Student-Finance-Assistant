@@ -1,4 +1,4 @@
-import { parseJson } from "@/lib/json";
+import { requireRecipient } from "./recipient.service";
 import { fundingAssistance } from "./funding-assistance.service";
 import { requireDemoFinance, requireSameEnvironment, requireCheckoutEnvironment } from "@/lib/financial-environment";
 import { getRiskPolicy } from "./financial-config.service";
@@ -165,57 +165,9 @@ async function parentRequirements(r: Request, db: DB) {
   const cs = await controls(u.id, db);
   const rates = await getRates(db);
   const cad = inCurrency(r.amount, r.currency, "CAD", rates);
-  let approved = false;
-  if (r.beneficiary_id) {
-    const [b] = await rows<{ status: string }>(
-      "SELECT status FROM beneficiaries WHERE id=? AND user_id=?",
-      [r.beneficiary_id, u.id],
-      db,
-    );
-    requireCondition(
-      b && !["REJECTED", "REMOVED"].includes(b.status),
-      "BENEFICIARY_PENDING",
-    );
-    const decisions = await rows<{ parent_id: string; status: string }>(
-      "SELECT parent_id,status FROM beneficiary_decisions WHERE beneficiary_id=?",
-      [r.beneficiary_id],
-      db,
-    );
-    approved =
-      cs.length > 0 &&
-      cs.every((c) =>
-        decisions.some(
-          (d) => d.parent_id === c.parent_id && d.status === "APPROVED",
-        ),
-      );
-  }
-  if (!cs.length) {
-    requireCondition(!r.beneficiary_id, "BENEFICIARY_PENDING");
-    const [setting] = await rows<{ value: string }>(
-      "SELECT value FROM admin_settings WHERE name='payments'",
-      [],
-      db,
-    );
-    const cap = setting
-      ? parseJson<{ nonBeneficiaryRmb?: string }>(setting.value, {})
-          .nonBeneficiaryRmb || "1000"
-      : "1000";
-    requireCondition(
-      D(inCurrency(r.amount, r.currency, "CNY", rates)).lte(cap),
-      "NON_BENEFICIARY_LIMIT",
-    );
-    return [];
-  }
+  if (!cs.length) return [];
   return cs
-    .filter((c) =>
-      approved
-        ? !c.auto_approve && D(cad).gt(c.threshold)
-        : !(
-            c.auto_approve &&
-            c.allow_non_beneficiary &&
-            D(cad).lte(c.non_beneficiary_limit)
-          ),
-    )
+    .filter((c) => !c.auto_approve || D(cad).gt(c.threshold))
     .map((c) => c.parent_id);
 }
 async function risk(r: Request, db: DB, held = false) {
@@ -229,8 +181,8 @@ async function risk(r: Request, db: DB, held = false) {
   const rates = await getRates(db),
     cs = await controls(r.user_id, db);
   const history = await rows<{ amount: string; currency: string; day: number }>(
-    "SELECT amount,currency,DATE(confirmed_at)=UTC_DATE() day FROM financial_requests WHERE user_id=? AND id<>? AND kind<>'TOPUP' AND status IN ('WAITING_PARENT','QUEUED','PROCESSING','COMPLETED') AND confirmed_at>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01') UNION ALL SELECT q.total amount,q.source_currency currency,DATE(t.completed_at)=UTC_DATE() day FROM sandbox_transfers t JOIN transfer_quotes q ON q.id=t.quote_id WHERE t.user_id=? AND t.status='COMPLETED' AND t.completed_at>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01')",
-    [r.user_id, r.id, r.user_id],
+    "SELECT amount,currency,DATE(confirmed_at)=UTC_DATE() day FROM financial_requests WHERE user_id=? AND id<>? AND kind<>'TOPUP' AND status IN ('WAITING_PARENT','QUEUED','PROCESSING','COMPLETED') AND confirmed_at>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01') UNION ALL SELECT q.total amount,q.source_currency currency,DATE(t.completed_at)=UTC_DATE() day FROM sandbox_transfers t JOIN transfer_quotes q ON q.id=t.quote_id WHERE t.user_id=? AND t.status='COMPLETED' AND t.completed_at>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01') UNION ALL SELECT amount,currency,DATE(created_at)=UTC_DATE() day FROM wallet_operations WHERE user_id=? AND id<>? AND kind='WITHDRAWAL_MANUAL' AND status NOT IN ('REJECTED','CANCELLED','DRAFT') AND created_at>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01')",
+    [r.user_id, r.id, r.user_id,r.user_id,r.id],
     db,
   );
   const min = (key: "per_transfer" | "daily_limit" | "monthly_limit") =>
@@ -285,8 +237,19 @@ async function risk(r: Request, db: DB, held = false) {
     db,
   );
 }
+export async function checkWithdrawalRisk(userId:string,accountId:string,amount:string,currency:string,db:DB,held=false,operationId="") {
+  const r={id:operationId,user_id:userId,account_id:accountId,amount,currency,category:"Other"} as Request;
+  await customer(userId,db);await risk(r,db,held);
+  const cs=await controls(userId,db),rates=await getRates(db);
+  return cs.filter(c=>!c.auto_approve||D(inCurrency(amount,currency,"CAD",rates)).gt(c.threshold)).map(c=>c.parent_id);
+}
 async function validateMethod(r: Request, db: DB) {
   await requireDemoFinance(r.user_id, db);
+  requireCondition(r.kind !== "SEND" || r.method === "INTERNAL", "EXTERNAL_SEND_DISABLED");
+  if (r.kind === "SEND") {
+    requireCondition(r.recipient_user_id, "RECIPIENT_UNAVAILABLE");
+    await requireRecipient(r.user_id, r.recipient_user_id, r.beneficiary_id, r.receive_currency, db);
+  }
   const [method] = await rows<{
     active: number;
     deposit_enabled: number;
@@ -310,23 +273,28 @@ export async function createPaymentDraft(
   userId: string,
   input: unknown,
   key: string,
+  transaction?: DB,
 ) {
   const v = requestSchema.parse(input);
+  requireCondition(v.kind !== "SEND" || v.method === "INTERNAL", "EXTERNAL_SEND_DISABLED");
   z.string().min(8).max(100).parse(key);
-  const owner = await customer(userId);
+  const owner = await customer(userId, transaction);
   requireCondition(
     !(v.method === "CARD" && v.kind !== "TOPUP") &&
       !(v.method === "INTERNAL" && v.kind !== "SEND"),
-    "VALIDATION_ERROR",
+    "FIELD_VALIDATION", {"method": "Choose a method supported for this operation."},
   );
-  return atomic(async (db) => {
+  const create = async (db: DB) => {
     await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [userId], db);
     const [existing] = await rows<Request>(
       "SELECT * FROM financial_requests WHERE user_id=? AND idempotency_key=?",
       [userId, key],
       db,
     );
-    if (existing) return existing;
+    if (existing) {
+      requireCondition(existing.account_id===v.account_id && existing.kind===v.kind && existing.method===v.method && D(existing.amount).eq(v.amount) && existing.receive_currency===v.receive_currency && existing.beneficiary_id===v.beneficiary_id && (v.beneficiary_id || existing.destination.toLowerCase()===v.destination.toLowerCase()),"IDEMPOTENCY_MISMATCH");
+      return existing;
+    }
     const [a] = await rows<{ currency: string; type: string }>(
       "SELECT currency,type FROM accounts WHERE id=? AND user_id=? AND archived=0",
       [v.account_id, userId],
@@ -356,18 +324,18 @@ export async function createPaymentDraft(
       );
       requireCondition(
         b.method === v.method && b.currency === v.receive_currency,
-        "VALIDATION_ERROR",
+        "FIELD_VALIDATION", {"beneficiary_id": "The beneficiary method and currency must match this payment."},
       );
       recipient = b.name;
       destination = b.destination;
     }
     requireCondition(
       v.kind === "TOPUP" || (recipient.length >= 2 && destination.length >= 3),
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"recipient": "Enter a recipient and destination."},
     );
     requireCondition(
       v.kind === "SEND" || v.receive_currency === a.currency,
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"receive_currency": "Funding and withdrawal currency must match the wallet."},
     );
     let receiver: { id: string; user_id: string } | undefined;
     if (v.method === "INTERNAL") {
@@ -385,7 +353,7 @@ export async function createPaymentDraft(
     const receive = money(
       D(v.amount).div(rates[a.currency]).mul(rates[v.receive_currency]),
     );
-    requireCondition(D(receive).gt(0), "VALIDATION_ERROR");
+    requireCondition(D(receive).gt(0), "FIELD_VALIDATION", {"amount": "The converted amount must be greater than zero."});
     const [method] = await rows<{ instructions: string }>(
       "SELECT instructions FROM payment_methods WHERE code=?",
       [v.method],
@@ -431,7 +399,8 @@ export async function createPaymentDraft(
       db,
     );
     return r;
-  });
+  };
+  return transaction ? create(transaction) : atomic(create);
 }
 async function addTransaction(
   r: Request,
@@ -460,6 +429,10 @@ async function addTransaction(
 }
 async function finish(r: Request, actor: string, note: string, db: DB) {
   await requireDemoFinance(r.user_id, db);
+  if (r.kind === "SEND") {
+    requireCondition(r.method === "INTERNAL" && r.recipient_user_id, "EXTERNAL_SEND_DISABLED");
+    await requireRecipient(r.user_id, r.recipient_user_id, r.beneficiary_id, r.receive_currency, db);
+  }
   if (r.recipient_user_id) await requireSameEnvironment(r.user_id, r.recipient_user_id, db);
   if (r.kind === "TOPUP") {
     const [a] = await rows(
@@ -485,6 +458,8 @@ async function finish(r: Request, actor: string, note: string, db: DB) {
     );
   } else {
     requireCondition(r.held, "INVALID_STATE");
+    const reservation=await write("UPDATE accounts SET reserved_balance=reserved_balance-? WHERE id=? AND reserved_balance>=?",[r.amount,r.account_id,r.amount],db);
+    requireCondition(reservation.affectedRows,"RESERVATION_MISMATCH");
     if (r.method === "INTERNAL") {
       const [a] = await rows(
         "SELECT a.id FROM accounts a JOIN users u ON u.id=a.user_id WHERE a.id=? AND a.user_id=? AND a.archived=0 AND u.status='ACTIVE' FOR UPDATE",
@@ -557,11 +532,12 @@ async function reject(
 ) {
   await requireDemoFinance(r.user_id, db);
   if (r.held) {
-    await write(
-      "UPDATE accounts SET balance=balance+? WHERE id=?",
-      [r.amount, r.account_id],
+    const released = await write(
+      "UPDATE accounts SET balance=balance+?,reserved_balance=reserved_balance-? WHERE id=? AND reserved_balance>=?",
+      [r.amount,r.amount, r.account_id,r.amount],
       db,
     );
+    requireCondition(released.affectedRows, "RESERVATION_MISMATCH");
     await pair(r, "REFUND", r.account_id, "CREDIT", r.amount, r.currency, db);
     await write("UPDATE financial_requests SET held=0 WHERE id=?", [r.id], db);
   }
@@ -591,13 +567,13 @@ async function cardCharge(userId: string, input: unknown, db: DB) {
     : [];
   requireCondition(!v.savedCardId || saved, "NOT_FOUND");
   const expiry = saved?.expiry || v.expiry;
-  requireCondition(/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry), "VALIDATION_ERROR");
+  requireCondition(/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry), "FIELD_VALIDATION", {"expiry": "Use MM/YY for the expiry date."});
   const [m, y] = expiry.split("/").map(Number);
-  requireCondition(Date.UTC(2000 + y, m, 1) > Date.now(), "VALIDATION_ERROR");
+  requireCondition(Date.UTC(2000 + y, m, 1) > Date.now(), "FIELD_VALIDATION", {"expiry": "The card has expired."});
   if (!saved)
     requireCondition(
       v.cardholder.length >= 2 && /^\d{3}$/.test(v.cvv) && v.card,
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"card": "Use an approved Demo test card."},
     );
   const ok = saved
     ? saved.demo_token === "DEMO_SUCCESS"
@@ -622,8 +598,9 @@ export async function confirmPayment(
   id: string,
   card: unknown = {},
   reference = "",
+  transaction?: DB,
 ) {
-  return atomic(async (db) => {
+  const confirm = async (db: DB) => {
     const r = await lockRequest(id, db);
     requireCondition(r.user_id === userId);
     await customer(userId, db);
@@ -640,11 +617,12 @@ export async function confirmPayment(
     if (r.kind !== "TOPUP") {
       await checkUsageLimit(userId, "TRANSFER_SIMULATIONS", db);
       await risk(r, db);
-      await write(
-        "UPDATE accounts SET balance=balance-? WHERE id=?",
-        [r.amount, r.account_id],
+      const reserved = await write(
+        "UPDATE accounts SET balance=balance-?,reserved_balance=reserved_balance+? WHERE id=? AND balance>=?",
+        [r.amount,r.amount, r.account_id,r.amount],
         db,
       );
+      requireCondition(reserved.affectedRows, "INSUFFICIENT_BALANCE");
       await pair(r, "HOLD", r.account_id, "DEBIT", r.amount, r.currency, db);
       await write(
         "UPDATE financial_requests SET held=1 WHERE id=?",
@@ -706,7 +684,8 @@ export async function confirmPayment(
       } else await queueOrComplete(r, userId, db);
     }
     return { id: r.id, status: r.status };
-  });
+  };
+  return transaction ? confirm(transaction) : atomic(confirm);
 }
 export async function decidePayment(
   userId: string,
@@ -823,6 +802,7 @@ export async function settlePayment(
 }
 export async function createBeneficiary(userId: string, input: unknown) {
   const v = beneficiarySchema.parse(input);
+  requireCondition(v.method === "INTERNAL", "EXTERNAL_SEND_DISABLED");
   const user = await customer(userId);
   await validCountry(v.country_code);
   await validCurrency(v.currency);
@@ -833,6 +813,9 @@ export async function createBeneficiary(userId: string, input: unknown) {
       const [recipient] = await rows<{id: string}>("SELECT id FROM users WHERE email=? AND is_demo=? AND status='ACTIVE' AND role IN ('STUDENT','PARENT')", [v.destination.toLowerCase(), user.is_demo], db);
       requireCondition(recipient && recipient.id !== userId, "RECIPIENT_UNAVAILABLE");
     }
+    const [duplicate] = await rows("SELECT id FROM beneficiaries WHERE user_id=? AND method='INTERNAL' AND LOWER(destination)=? AND currency=? AND status<>'REMOVED'", [userId,v.destination.trim().toLowerCase(),v.currency],db);
+    requireCondition(!duplicate,"BENEFICIARY_EXISTS");
+    const status = user.role === "PARENT" || !(await controls(userId,db)).length ? "APPROVED" : "PENDING";
     const id = randomUUID();
     await write(
       "INSERT INTO beneficiaries(id,user_id,name,method,currency,country_code,destination,status) VALUES (?,?,?,?,?,?,?,?)",
@@ -844,7 +827,7 @@ export async function createBeneficiary(userId: string, input: unknown) {
         v.currency,
         v.country_code,
         v.destination,
-        user.role === "PARENT" ? "APPROVED" : "PENDING",
+        status,
       ],
       db,
     );
@@ -856,7 +839,7 @@ export async function createBeneficiary(userId: string, input: unknown) {
         db,
       );
     await audit(userId, "BENEFICIARY_CREATED", "beneficiaries", id, {}, db);
-    return { id, status: user.role === "PARENT" ? "APPROVED" : "PENDING" };
+    return { id, status };
   });
 }
 export async function decideBeneficiary(

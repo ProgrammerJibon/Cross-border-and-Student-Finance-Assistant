@@ -1,5 +1,14 @@
 # FinBridge AI — Cross-Border & Student Finance Assistant
 
+# Current financial scope
+
+The application now exposes internal FinBridge transfers, Gateway/Manual Add Money,
+manual withdrawal review and family support requests. Live wallet operations remain
+disabled pending authorized custody and trusted settlement integration. Historical
+remittance/sandbox descriptions below are not evidence of live financial capability.
+See [current implementation and release readiness](docs/FINANCE_RELEASE_READINESS.md)
+for verified results, migration/bootstrap instructions and outstanding limitations.
+
 [![Next.js](https://img.shields.io/badge/Next.js-16.4-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.3-blue?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue?logo=typescript)](https://www.typescriptlang.org/)
@@ -10,7 +19,7 @@
 FinBridge AI is an intelligent financial management and cross-border remittance assistant designed for international students, families, and educational sponsors. It bridges the gap between home-country funding and foreign-study expenses through multi-currency wallets, tuition forecasting, simulated remittance comparisons, parental financial governance, and an autonomous AI financial copilot.
 
 > [!NOTE]
-> All balances, exchange rates, remittance providers, and payment transfers in this application are **sandbox simulation data**. No real money is transferred.
+> Demo financial operations use **simulated funds only**. Live identities start with zero wallet funds, and Live wallet movement remains disabled pending settlement integration and financial authorization. Subscription merchant checkout is a separate capability.
 
 ---
 

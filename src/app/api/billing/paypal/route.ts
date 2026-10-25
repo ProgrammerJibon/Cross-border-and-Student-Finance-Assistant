@@ -1,4 +1,4 @@
-import { processWebhook, recordProviderException } from "@/services/webhook-events.service";
+import { processWebhook, recordProviderException, failProviderTopup } from "@/services/webhook-events.service";
 import { verifyPayPalWebhook, type Checkout } from "@/services/checkout-provider.service";
 import { fulfillCheckout } from "@/services/billing.service";
 import { rows, write } from "@/lib/db";
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
     const resource=event.resource || {};
     const remote=event.event_type === "PAYMENT.SALE.COMPLETED" ? resource.billing_agreement_id : resource.supplementary_data?.related_ids?.order_id || resource.id;
     if(typeof remote === "string") {
+      if(event.event_type === "PAYMENT.CAPTURE.DENIED") await failProviderTopup("PAYPAL",environment,remote,"FAILED");
       const [c]=await rows<Checkout>("SELECT * FROM provider_checkouts WHERE provider='PAYPAL' AND environment=? AND remote_id=?",[environment,remote]);
       if(c) {
         if(["BILLING.SUBSCRIPTION.CANCELLED","BILLING.SUBSCRIPTION.EXPIRED"].includes(event.event_type)) await write("UPDATE provider_checkouts SET renewal_status='CANCELLED' WHERE id=?",[c.id]);

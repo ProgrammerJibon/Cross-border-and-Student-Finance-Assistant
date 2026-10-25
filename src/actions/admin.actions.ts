@@ -182,7 +182,7 @@ export async function saveProvider(input: unknown) {
         reliability: z.coerce.number().int().min(0).max(100),
         active: z.boolean(),
       })
-      .refine((v) => Number(v.maximum) >= Number(v.minimum))
+      .refine((v) => Number(v.maximum) >= Number(v.minimum), {path:["maximum"],message:"Maximum must be at least the minimum."})
       .parse(input);
     await atomic(async (db) => {
       const [existing] = await rows(
@@ -241,12 +241,12 @@ export async function saveRate(input: unknown) {
     const rates = await getRates();
     requireCondition(
       v.currency !== "CNY" || D(v.rate).eq(1),
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"rate": "The RMB reference rate must equal 1."},
     );
     const normalized = D(v.rate).mul(rates.CNY).toFixed(8);
     requireCondition(
       v.currency !== "CAD" || D(normalized).eq(1),
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"rate": "The normalized CAD reference rate must equal 1."},
     );
     await write("INSERT INTO fx_rates(id,currency,rate) VALUES (?,?,?)", [
       randomUUID(),
@@ -304,7 +304,7 @@ export async function saveCorridor(input: unknown) {
         target_currency: currency,
         remove: z.boolean().default(false),
       })
-      .refine((v) => v.source_currency !== v.target_currency)
+      .refine((v) => v.source_currency !== v.target_currency, {path:["target_currency"],message:"Choose a target currency different from the source."})
       .parse(input);
     await validCurrency(v.source_currency);
     await validCurrency(v.target_currency);

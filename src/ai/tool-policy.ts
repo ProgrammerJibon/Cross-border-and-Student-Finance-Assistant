@@ -9,6 +9,9 @@ const shared = [
   "getActivity",
 ];
 const customer = [
+  "getEligibleFamily",
+  "discoverRecipients",
+  "getFamilyFunding",
   "getAccounts",
   "analyseTransactions",
   "getPaymentOptions",

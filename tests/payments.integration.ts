@@ -145,15 +145,16 @@ test("shared financial state machine: approvals, settlement, concurrency, balanc
       },
     );
     await t.test(
-      "medium one-time payments use explicit parent policy; held funds refund once",
+      "non-family bypass is rejected; family sends retain parent limits and refund once",
       async () => {
         await write(
-          "UPDATE parental_controls SET auto_approve=1,allow_non_beneficiary=1,non_beneficiary_limit=50 WHERE link_id=?",
+          "UPDATE parental_controls SET auto_approve=1,threshold=50,allow_non_beneficiary=1,non_beneficiary_limit=50 WHERE link_id=?",
           [link],
         );
-        const r = await draft(student, "SEND", "INTERNAL", "100");
+        await assert.rejects(draft(student,"SEND","INTERNAL","1"),/BENEFICIARY_REQUIRED/);
+        const r = await draft(student, "SEND", "INTERNAL", "100",{destination:`${parent}@example.com`});
         assert.equal((await confirmPayment(student, r.id)).status, "COMPLETED");
-        const above = await draft(student, "SEND", "ALIPAY", "300");
+        const above = await draft(student, "SEND", "INTERNAL", "300",{destination:`${parent}@example.com`});
         assert.equal(
           (await confirmPayment(student, above.id)).status,
           "WAITING_PARENT",
@@ -532,6 +533,7 @@ test("shared financial state machine: approvals, settlement, concurrency, balanc
       },
     );
   } finally {
+    for (const id of ids) await write("UPDATE agent_runs SET status='INTERRUPTED' WHERE user_id=? AND status IN ('PENDING','RUNNING')",[id]);
     for (const id of ids)
       await write(
         "UPDATE users SET status='CLOSED',session_version=session_version+1 WHERE id=?",

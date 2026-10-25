@@ -55,7 +55,7 @@ async function riskFor(
   }>("SELECT * FROM accounts WHERE id=? FOR UPDATE", [accountId], db);
   requireCondition(a && a.user_id === userId, "NOT_FOUND");
   requireCondition(a.type !== "CASH", "USE_WALLET_ACCOUNT");
-  requireCondition(a.currency === q.source_currency, "VALIDATION_ERROR");
+  requireCondition(a.currency === q.source_currency, "FIELD_VALIDATION", {"account_id": "The source account must match the quote currency."});
   const previous = await rows<{
     total: string;
     source_currency: string;
@@ -107,7 +107,7 @@ async function riskFor(
     );
     requireCondition(
       D(q.receive_amount).lte(D(invoice.amount).minus(invoice.paid)),
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"amount": "Payment exceeds the remaining tuition amount."},
     );
     deadlineMissed =
       Date.now() + q.eta_days * 86400000 >
@@ -221,21 +221,22 @@ export async function prepare(
     destinationId?: string;
   },
 ) {
+  requireCondition(input.purpose === "CONVERSION", "EXTERNAL_SEND_DISABLED");
   requireCondition(
     !(input.invoiceId && input.destinationId),
-    "VALIDATION_ERROR",
+    "FIELD_VALIDATION", {"destinationId": "Choose one destination."},
   );
   requireCondition(
-    !input.invoiceId || input.purpose === "TUITION",
-    "VALIDATION_ERROR",
+    !input.invoiceId,
+    "FIELD_VALIDATION", {"invoiceId": "Conversions cannot pay an invoice."},
   );
   requireCondition(
     input.purpose !== "CONVERSION" || !!input.destinationId,
-    "VALIDATION_ERROR",
+    "FIELD_VALIDATION", {"destinationId": "Select a destination account."},
   );
   requireCondition(
     !input.destinationId || input.destinationId !== input.accountId,
-    "VALIDATION_ERROR",
+    "FIELD_VALIDATION", {"destinationId": "Source and destination accounts must be different."},
   );
   return atomic(async (db) => {
     await requireDemoFinance(userId, db);
@@ -369,6 +370,7 @@ export async function execute(
       db,
     );
     requireCondition(t, "NOT_FOUND");
+    requireCondition(t.purpose === "CONVERSION", "EXTERNAL_SEND_DISABLED");
     requireCondition(t.status === "APPROVED", "APPROVAL_REQUIRED");
     const [approval] = await rows<{ id: string }>(
       "SELECT id FROM approval_requests WHERE transfer_id=? AND user_id=? AND consumed=0 AND token_hash=? AND expires_at>UTC_TIMESTAMP() FOR UPDATE",
@@ -462,7 +464,7 @@ export async function execute(
         t.account_id,
         q.total,
         q.source_currency,
-        t.purpose === "TUITION" ? "Education" : "Other",
+        "Other",
         reference,
       ],
       db,

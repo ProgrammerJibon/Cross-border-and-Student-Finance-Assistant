@@ -27,6 +27,7 @@ import { completeOnboarding } from "@/actions/user.actions";
 import { Brand, LanguageSwitch, ThemeToggle } from "@/components/layout/shell";
 import { ProfilePhoto } from "@/components/ui/profile-photo";
 import { currencyOptions } from "@/components/accounts/money-page";
+import { studentStatusOptions } from "@/lib/student-profile";
 import type { User } from "@/types";
 export function AuthPage({ page }: { page: string }) {
   const { t, locale, run, theme, catalog } = useApp();
@@ -80,6 +81,7 @@ export function AuthPage({ page }: { page: string }) {
         : [
             { name: "email", type: "email" },
             { name: "password", type: "password" },
+            { name: "mfa", label: "mfaCode", required: false },
           ];
   return (
     <div className="auth-layout">
@@ -231,12 +233,15 @@ export function OnboardingPage({ user }: { user: User }) {
     study_country: "China",
     home_currency: user.preferred_currency,
     study_currency: "CNY",
+    tuition_currency: "CNY",
     preferred_currency: user.preferred_currency,
     tuition: "8000",
     paid: "0",
     scholarship: "0",
     due_date: new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10),
     semester: "",
+    programme: "", funding_needs: "0", payment_schedule: "ONE_OFF", installments: "1",
+    first_due_date: new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10),
     balance: "0",
     income: "0",
     expenses: "0",
@@ -254,10 +259,10 @@ export function OnboardingPage({ user }: { user: User }) {
     [
       { name: "name" },
       { name: "birth_date", type: "date" },
-      { name: "student_status" },
+      { name: "student_status", options: studentStatusOptions },
       { name: "university" },
-      { name: "home_country" },
-      { name: "study_country" },
+      { name: "home_country", options: catalog.countries.map(c => ({value: c.name, label: c.name})) },
+      { name: "study_country", options: catalog.countries.map(c => ({value: c.name, label: c.name})) },
     ],
     ["home_currency", "study_currency", "preferred_currency"].map((name) => ({
       name,
@@ -265,10 +270,14 @@ export function OnboardingPage({ user }: { user: User }) {
     })),
     [
       { name: "tuition", type: "number", min: 0.01 },
+      { name: "tuition_currency", options: currencyOptions },
       { name: "paid", type: "number", min: 0 },
       { name: "scholarship", type: "number", min: 0 },
       { name: "due_date", type: "date" },
       { name: "semester" },
+      { name: "programme" }, { name: "funding_needs", type: "number", min: 0 },
+      { name: "payment_schedule", options: ["ONE_OFF","MONTHLY","TERM"].map(value=>({value,label:value})) },
+      { name: "first_due_date", type: "date" }, { name: "installments", type: "number", min: 1, max: 60, step: "1" },
     ],
     ["balance", "income", "expenses"].map((name) => ({
       name,
@@ -301,7 +310,14 @@ export function OnboardingPage({ user }: { user: User }) {
               return;
             }
             setBusy(true);
-            const r = await run(() => completeOnboarding({ ...values, goals }));
+            const r = await run(async () => {
+              const result = await completeOnboarding({ ...values, goals });
+              if (!result.success && result.fieldErrors) {
+                const index = fields.findIndex(group => group.some(field => result.fieldErrors?.[field.name]));
+                if (index >= 0) setStep(index);
+              }
+              return result;
+            });
             setBusy(false);
             if (r !== undefined) router.push(`/${locale}/dashboard`);
           }}

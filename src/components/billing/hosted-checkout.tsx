@@ -1,4 +1,5 @@
 "use client";
+import { resultMessage } from "@/lib/result-message";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/ui/providers";
@@ -43,7 +44,7 @@ export function HostedCheckout({plan,requestId}:{plan?:Row;requestId?:string}) {
   useEffect(()=>{
     let active=true;
     const load=requestId ? topupOptions({requestId,environment}) : checkoutOptions({plan:planId,cycle:"monthly",environment,extraSeats});
-    void load.then(r=>{if(!active)return;if(r.success){setQuote(r.data);setError("");if("provider" in r.data) setProvider(r.data.provider as Provider)}else{setQuote(null);setError(r.code)}}).catch(()=>{if(active)setError("CHECKOUT_PROVIDER_ERROR")});
+    void load.then(r=>{if(!active)return;if(r.success){setQuote(r.data);setError("");if("provider" in r.data) setProvider(r.data.provider as Provider)}else{setQuote(null);setError(resultMessage(r))}}).catch(()=>{if(active)setError("CHECKOUT_PROVIDER_ERROR")});
     return()=>{active=false};
   },[requestId,planId,environment,extraSeats,reload]);
   const start=async()=>{
@@ -67,7 +68,7 @@ export function HostedCheckout({plan,requestId}:{plan?:Row;requestId?:string}) {
           window.location.assign(r.data.url);
         }
       }
-      else{payWindow?.close();setError(r.code)}
+      else{payWindow?.close();setError(resultMessage(r))}
     } catch (e) {
       console.error("Hosted checkout error:", e);
       payWindow?.close();
@@ -76,7 +77,7 @@ export function HostedCheckout({plan,requestId}:{plan?:Row;requestId?:string}) {
     finally{setBusy(false)}
   };
   return <div className="hosted-checkout">
-    <p role="status">{t("liveEnvironmentNotice")}</p>
+    
     {planId==="family-pro" && <label>{t("additionalProStudents")}<input type="number" min={0} max={100} value={extraSeats} disabled={busy || !!checkout} onChange={e=>{setExtraSeats(Math.min(100,Math.max(0,Math.trunc(Number(e.target.value)||0))));setQuote(null);setConsent(false)}} /></label>}
     {!requestId && <div className="provider-options" role="radiogroup" aria-label={t("choosePaymentMethod")}>{(["UNIONPAY","STRIPE","PAYPAL"] as const).map(p=><button type="button" role="radio" aria-checked={provider===p} key={p} className={`provider-option ${provider===p?"selected":""}`} disabled={busy || !!checkout || !quote?.providers[p]} onClick={()=>{setProvider(p);setConsent(false)}}><PaymentLogo method={p}/><strong>{providerNames[p]}</strong><small>{t(p==="STRIPE"?"stripeFullCheckout":p==="UNIONPAY"?"unionpayViaStripe":"paypalCheckout")}</small></button>)}</div>}
     {requestId && <h3><PaymentLogo method={provider}/> {providerNames[provider]}</h3>}

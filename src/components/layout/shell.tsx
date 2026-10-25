@@ -546,13 +546,13 @@ export function Shell({
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sandbox-tag">
+          {!!user.is_demo && <div className="sandbox-tag">
             <FiShield />
             <span>
               {t("sandbox")}
               <small>{t("sandboxNote")}</small>
             </span>
-          </div>
+          </div>}
           <div className="sidebar-profile-container" ref={sidebarMenuRef}>
             {sidebarMenuOpen && (
               <div className="profile-dropdown-menu sidebar-dropdown">

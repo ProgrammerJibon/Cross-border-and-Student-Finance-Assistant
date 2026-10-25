@@ -1,4 +1,5 @@
 "use client";
+import { resultMessage } from "@/lib/result-message";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -25,7 +26,7 @@ export function ProviderPaymentHistory() {
       .then((r) => {
         if (active) {
           if (r.success) setPayments(r.data);
-          else setError(r.code);
+          else setError(resultMessage(r));
         }
       })
       .catch(() => {

@@ -51,7 +51,8 @@ test("financial environments fail closed across services, database, funding and 
       await assert.rejects(write("INSERT INTO financial_requests(id,user_id,account_id,kind,method,amount,currency,recipient,destination,receive_amount,receive_currency,fx_rate,idempotency_key) VALUES (?,?,?,'TOPUP','BANK',1,'USD','','',1,'USD',1,?)",[randomUUID(),demo,wallet(live),randomUUID()]),/ACCOUNT_OWNERSHIP_MISMATCH/);
     });
     await t.test("underfunded drafts survive failed funding and require confirmation after funding", async()=>{
-      const draft=await createPaymentDraft(demo,input(demo,friend,"25"),randomUUID());
+      const beneficiary=await createBeneficiary(demo,{name:"Friend",method:"INTERNAL",currency:"USD",country_code:"US",destination:`${friend}@example.test`});
+      const draft=await createPaymentDraft(demo,{...input(demo,friend,"25"),beneficiary_id:beneficiary.id},randomUUID());
       await assert.rejects(confirmPayment(demo,draft.id),/INSUFFICIENT_BALANCE/);
       const help=await fundingAssistance(demo,draft.id);
       assert.equal(help.shortfall,"5.00");assert.equal(help.available,"20.00");assert.equal(help.confirmationRequired,true);

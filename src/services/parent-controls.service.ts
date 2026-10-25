@@ -49,8 +49,8 @@ export async function checkCategoryLimit(
     ),
   );
   const held = await rows<{ amount: string; currency: string }>(
-    "SELECT amount,currency FROM financial_requests WHERE user_id=? AND category=? AND held=1 AND id<>? AND DATE_FORMAT(confirmed_at,'%Y-%m')=?",
-    [userId, category, excludedRequest, date.slice(0, 7)],
+    "SELECT amount,currency FROM financial_requests WHERE user_id=? AND category=? AND held=1 AND id<>? AND DATE_FORMAT(confirmed_at,'%Y-%m')=? UNION ALL SELECT amount,currency FROM wallet_operations WHERE user_id=? AND ?='Other' AND kind='WITHDRAWAL_MANUAL' AND status IN ('WAITING_PARENT','PENDING_REVIEW','PROCESSING','PAID_PENDING_VERIFICATION') AND id<>? AND DATE_FORMAT(created_at,'%Y-%m')=?",
+    [userId, category, excludedRequest, date.slice(0, 7),userId,category,excludedRequest,date.slice(0,7)],
     db,
   );
   const reserved = held.reduce(

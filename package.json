@@ -19,7 +19,10 @@
     "billing:check": "node scripts/check-payment-providers.mjs",
     "test:billing": "node --conditions=react-server --import tsx --test tests/billing.integration.ts",
     "test:isolation": "node --conditions=react-server --import tsx --test tests/isolation.integration.ts",
-    "finance:reconcile": "node --conditions=react-server --import tsx scripts/reconcile.ts"
+    "finance:reconcile": "node --conditions=react-server --import tsx scripts/reconcile.ts",
+    "finance:bootstrap": "node scripts/bootstrap-live-admin.mjs",
+    "test:wallet": "node scripts/run-isolated-tests.mjs integration tests/wallet-workflows.integration.ts tests/admin-bootstrap.integration.ts",
+    "test:integration": "node scripts/run-isolated-tests.mjs integration"
   },
   "keywords": [],
   "author": "",

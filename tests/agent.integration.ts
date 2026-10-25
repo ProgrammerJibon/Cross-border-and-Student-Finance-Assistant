@@ -8,6 +8,7 @@ import { agentUsage, recordProviderUsage } from "../src/ai/usage";
 import { resolveModel } from "../src/ai/model-config";
 import { encryptSecret } from "../src/lib/secrets";
 import { runAgent } from "../src/ai/provider";
+import { createBeneficiary } from "../src/services/payment.service";
 
 test("agent database integration: ownership, history, workflows and usage", async (t) => {
   const ids = [randomUUID(), randomUUID(), randomUUID()];
@@ -123,6 +124,7 @@ test("agent database integration: ownership, history, workflows and usage", asyn
     await t.test(
       "financial tools prepare drafts, reject forged accounts, and require confirmation",
       async () => {
+        const beneficiary=await createBeneficiary(student,{name:"Parent",method:"INTERNAL",currency:"CNY",country_code:"CN",destination:`${parent}@agent.test`});
         const input = {
           kind: "SEND",
           method: "INTERNAL",
@@ -130,7 +132,7 @@ test("agent database integration: ownership, history, workflows and usage", asyn
           amount: "25",
           recipient: "Parent",
           destination: `${parent}@agent.test`,
-          beneficiary_id: null,
+          beneficiary_id: beneficiary.id,
           receive_currency: "CNY",
           category: "Other",
           note: "fixture",
@@ -297,7 +299,7 @@ test("agent database integration: ownership, history, workflows and usage", asyn
         [id],
       );
       await write(
-        "UPDATE agent_runs SET status='INTERRUPTED' WHERE user_id=? AND status='RUNNING'",
+        "UPDATE agent_runs SET status='INTERRUPTED' WHERE user_id=? AND status IN ('PENDING','RUNNING')",
         [id],
       );
       await write(

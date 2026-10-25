@@ -62,6 +62,11 @@ export async function resetDemoData(actorId: string) {
     requireCondition(!(await rows(`SELECT f.id FROM family_links f JOIN users s ON s.id=f.student_id JOIN users p ON p.id=f.parent_id WHERE s.is_demo<>p.is_demo AND (s.is_demo=1 OR p.is_demo=1)`,[],db)).length,"DEMO_RESET_UNSAFE");
     requireCondition(!(await rows("SELECT r.id FROM financial_requests r JOIN users u ON u.id=r.user_id JOIN users v ON v.id=r.recipient_user_id WHERE u.is_demo<>v.is_demo",[],db)).length,"DEMO_RESET_UNSAFE");
     for(const [table,condition,values] of [
+      ["wallet_journal",`operation_id IN (SELECT id FROM wallet_operations WHERE ${owns} AND environment='DEMO')`,ids],
+      ["wallet_operation_approvals",`operation_id IN (SELECT id FROM wallet_operations WHERE ${owns} AND environment='DEMO')`,ids],
+      ["wallet_operation_events",`operation_id IN (SELECT id FROM wallet_operations WHERE ${owns} AND environment='DEMO')`,ids],
+      ["wallet_operations",`${owns} AND environment='DEMO'`,ids],
+      ["family_funding_requests",`student_id IN (${scope}) AND environment='DEMO'`,ids],
       ["provider_renewals",`checkout_id IN (SELECT id FROM provider_checkouts WHERE ${owns})`,ids],
       ["provider_checkouts",owns,ids],
       ["agent_conversation_turns",`run_id IN (${runs}) OR previous_run_id IN (${runs})`,[...ids,...ids]],
@@ -84,7 +89,7 @@ export async function resetDemoData(actorId: string) {
       ["budgets",owns,ids], ["tuition_plans",owns,ids], ["tuition_invoices",owns,ids],
       ["generated_alerts",owns,ids], ["alerts",owns,ids], ["notifications",owns,ids],
       ["notification_subscriptions",owns,ids], ["notification_devices",owns,ids],
-      ["transactions",owns,ids], ["accounts",owns,ids], ["financial_goals",owns,ids],
+      ["budget_records",owns,ids], ["transactions",owns,ids], ["accounts",owns,ids], ["financial_goals",owns,ids],
       ["usage_counters",owns,ids], ["demo_payments",owns,ids], ["subscription_events",owns,ids],
       ["reports",owns,ids], ["credit_tasks",owns,ids], ["credit_profiles",owns,ids],
       ["risk_assessments",owns,ids], ["saved_cards",owns,ids], ["password_resets",owns,ids],

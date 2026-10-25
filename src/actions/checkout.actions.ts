@@ -141,7 +141,7 @@ export async function providerPaymentHistory() {
   return action(async () => {
     const u = await requireUser();
     return rows(
-      "SELECT id,provider,purpose,environment,plan_id,cycle,amount,currency,status,remote_id reference,created_at FROM provider_checkouts WHERE user_id=? ORDER BY created_at DESC LIMIT 20",
+      "SELECT id,provider,purpose,environment,plan_id,cycle,amount,currency,status,CASE WHEN status='COMPLETED' THEN receipt ELSE NULL END reference,created_at FROM provider_checkouts WHERE user_id=? ORDER BY created_at DESC LIMIT 20",
       [u.id],
     );
   });

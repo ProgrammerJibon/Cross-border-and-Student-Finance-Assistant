@@ -71,7 +71,7 @@ async function conditions(userId: string, db: DB): Promise<Condition[]> {
     amount: string;
     currency: string;
   }>(
-    "SELECT category,currency,SUM(amount) amount FROM transactions WHERE user_id=? AND type='EXPENSE' AND date>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01') AND date<=LAST_DAY(UTC_DATE()) GROUP BY category,currency",
+    "SELECT category,currency,SUM(amount) amount FROM finance_records WHERE user_id=? AND type='EXPENSE' AND date>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01') AND date<=LAST_DAY(UTC_DATE()) GROUP BY category,currency",
     [userId],
     db,
   );
@@ -93,7 +93,7 @@ async function conditions(userId: string, db: DB): Promise<Condition[]> {
       });
   }
   const recent = await rows<{ id: string; amount: string; currency: string }>(
-    "SELECT id,amount,currency FROM transactions WHERE user_id=? AND type='EXPENSE' AND date>=DATE_SUB(UTC_DATE(),INTERVAL 7 DAY)",
+    "SELECT id,amount,currency FROM finance_records WHERE user_id=? AND type='EXPENSE' AND date>=DATE_SUB(UTC_DATE(),INTERVAL 7 DAY)",
     [userId],
     db,
   );

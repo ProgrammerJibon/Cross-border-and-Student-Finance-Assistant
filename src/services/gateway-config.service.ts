@@ -5,13 +5,14 @@ import { approvalSchema, eligiblePayment } from "@/lib/payment-capabilities";
 export type Environment = "sandbox" | "live";
 export type GatewayConfig = {
   paypalClientId?: string; paypalSecret?: string; paypalWebhookId?: string;
-  stripeSecret?: string; stripeWebhookSecret?: string;
+  stripePublishableKey?: string; stripeSecret?: string; stripeWebhookSecret?: string;
   buyerEmail?: string; buyerPassword?: string;
 };
 export async function gatewayConfig(environment: Environment): Promise<GatewayConfig> {
   const [saved] = process.env.PAYMENT_CONFIG_SOURCE === "environment" ? [] : await rows<{ config_cipher: string }>("SELECT config_cipher FROM payment_gateway_config WHERE environment=?", [environment]);
   const prefix = environment === "live" ? "LIVE_" : "";
   return {
+    stripePublishableKey: process.env[`${prefix}STRIPE_PUBLISHABLE_KEY`] || process.env[environment === "sandbox" ? "STRIPE_TEST_PUBLISHABLE_KEY" : "STRIPE_LIVE_PUBLISHABLE_KEY"],
     paypalClientId:
       process.env[`${prefix}PAYPAL_CLIENT_ID`] ||
       (environment === "sandbox"

@@ -15,7 +15,7 @@ export async function compareTransfers(input: unknown) {
     await requireDemoFinance(u.id);
     const v = z
       .object({ amount, source: currency, target: currency })
-      .refine((v) => v.source !== v.target)
+      .refine((v) => v.source !== v.target, {path:["target"],message:"Choose a target currency different from the source."})
       .parse(input);
     await validCurrency(v.source);
     await validCurrency(v.target);
@@ -65,7 +65,7 @@ export async function prepareTransfer(input: unknown) {
         invoiceId: id.optional(),
         destinationId: id.optional(),
       })
-      .refine((v) => v.purpose !== "CONVERSION" || !!v.destinationId)
+      .refine((v) => v.purpose !== "CONVERSION" || !!v.destinationId, {path:["destinationId"],message:"Select a destination account for conversion."})
       .parse(input);
     return prepare(u.id, v);
   });

@@ -16,6 +16,14 @@ const parent = ["PARENT"];
 const admin = ["ADMIN"];
 const everyone = ["STUDENT", "PARENT", "ADMIN"];
 export const agentActionCatalog = {
+  requestSupport: {
+    roles:student,route:"payments",description:"Request money from an accepted linked parent. Creates a pending request only; never debits the parent.",
+    schema:z.object({parent_id:id,amount,currency,reason:z.string().max(500)}).strict(),
+  },
+  decideSupport: {
+    roles:parent,route:"payments",description:"Approve or decline a linked student's funding request. Approval alone never sends money. Final transfer uses the secure payment form.",
+    schema:z.object({request_id:id,decision:z.enum(["APPROVE","DECLINE"])}).strict(),
+  },
   saveAccount: {
     roles: customer,
     route: "money",
@@ -40,7 +48,7 @@ export const agentActionCatalog = {
     roles: student,
     route: "tuition",
     description:
-      "Create or edit a tuition invoice. Ask for name, amount, currency, due date and semester; paid and scholarship are required.",
+      "Create or edit a tuition invoice. Collect institution name, programme, amount, currency, final due date, semester, paid, scholarship, funding_needs, payment_schedule (ONE_OFF/MONTHLY/TERM), first_due_date and installments.",
     schema: tuitionSchema.strict(),
   },
   saveFundingPlan: {
@@ -59,7 +67,7 @@ export const agentActionCatalog = {
     roles: customer,
     route: "transactions",
     description:
-      "Record an expense, or cash income. Wallet deposits must use draftPayment instead. Requires account, amount, category and date.",
+      "Record budgeting income or expenses without changing wallet balances. Requires account, amount, category and date. This never deposits or withdraws funds.",
     schema: transactionSchema.strict(),
   },
   categorizeTransaction: {

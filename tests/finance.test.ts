@@ -162,6 +162,6 @@ test("invalid transfer destinations are rejected before database mutations", asy
     { ...input, destinationId: "source" },
   ])
     await assert.rejects(() => prepare("student", invalid), {
-      message: "VALIDATION_ERROR",
+      message: invalid.purpose === "CONVERSION" ? "FIELD_VALIDATION" : "EXTERNAL_SEND_DISABLED",
     });
 });

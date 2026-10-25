@@ -132,7 +132,7 @@ export async function savePaymentMethod(input: unknown) {
       ["CARD", "INTERNAL"].includes(v.code) ||
         !v.active ||
         v.instructions.length >= 5,
-      "VALIDATION_ERROR",
+      "FIELD_VALIDATION", {"instructions": "Active payment methods require instructions of at least 5 characters."},
     );
     await write(
       "UPDATE payment_methods SET name=?,active=?,deposit_enabled=?,withdrawal_enabled=?,instructions=?,currencies=? WHERE code=?",

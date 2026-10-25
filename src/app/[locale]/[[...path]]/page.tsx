@@ -9,7 +9,6 @@ import { AuthPage, OnboardingPage } from "@/components/forms/auth-pages";
 import { Overview } from "@/components/dashboard/overview";
 import { MoneyPage } from "@/components/accounts/money-page";
 import { TransactionsPage } from "@/components/accounts/transactions-page";
-import { TransferPage } from "@/components/transfers/transfer-page";
 import { TuitionPage } from "@/components/tuition/tuition-page";
 import { BudgetPage } from "@/components/budget/budget-page";
 import { AgentPage } from "@/components/agent/agent-page";
@@ -33,6 +32,7 @@ import {
 } from "@/components/settings/platform-panels";
 import { publicTeam } from "@/actions/platform.actions";
 import { PaymentsPanel } from "@/components/payments/payments-panel";
+import { AdminSecurity } from "@/components/forms/admin-security";
 export const dynamic = "force-dynamic";
 export default async function Page({
   params,
@@ -67,6 +67,7 @@ export default async function Page({
     return <AuthPage page={path} />;
   const user = await currentUser();
   if (!user) redirect(`/${locale}/login`);
+  if (user.must_rotate_password) return <AdminSecurity rotate={!!user.must_rotate_password}/>;
   if (!canOpen(user.role, path, user.admin_permissions))
     redirect(
       `/${locale}/${["ADMIN", "MODERATOR"].includes(user.role) ? "admin" : user.role === "PARENT" ? "parent" : "dashboard"}`,
@@ -156,7 +157,7 @@ export default async function Page({
   ) : path === "wallet" ? (
     <WalletPage data={data} />
   ) : path === "transfer" ? (
-    <TransferPage data={data} />
+    <PaymentsPanel data={data} />
   ) : path === "tuition" ? (
     <TuitionPage data={data} />
   ) : path === "budget" ? (
@@ -172,6 +173,7 @@ export default async function Page({
   ) : path === "family" || path.startsWith("parent") ? (
     <>
       <FamilyPage data={data} path={path} />
+      <PaymentsPanel data={data} compact mode="family" />
       {path === "parent/approvals" && (
         <PaymentsPanel data={data} compact mode="approvals" />
       )}
