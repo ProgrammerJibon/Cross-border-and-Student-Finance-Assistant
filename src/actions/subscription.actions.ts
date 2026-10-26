@@ -9,7 +9,6 @@ import { audit } from "@/lib/audit";
 export async function activateStudentFree() {
   return action(async () => {
     const u = await requireUser("STUDENT");
-    requireCondition(!u.is_demo, "DEMO_PLAN_LOCKED");
     await cancelUserRenewals(u.id);
     await atomic(async (db) => {
       await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
@@ -41,7 +40,6 @@ export async function activateStudentFree() {
 export async function cancelSubscription() {
   return action(async () => {
     const u = await requireUser();
-    requireCondition(!u.is_demo, "DEMO_PLAN_LOCKED");
     await cancelUserRenewals(u.id);
     await atomic(async (db) => {
       await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);

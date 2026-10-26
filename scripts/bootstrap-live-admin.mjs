@@ -18,7 +18,7 @@ try {
     await db.execute("INSERT INTO users(id,name,email,password_hash,role,is_demo,onboarded,must_rotate_password,bootstrap_identity) VALUES (?,'Live administrator',?,?,'ADMIN',0,1,1,1)",[id,'jibon@jibon.bd',await bcrypt.hash(password,12)]);
     await db.execute('INSERT INTO user_preferences(user_id) VALUES (?)',[id]);
     await db.execute("INSERT INTO audit_logs(id,actor_id,action,entity_type,entity_id,metadata) VALUES (?,?,'ADMIN_BOOTSTRAP','users',?,'{}')",[randomUUID(),id,id]);
-    console.log('Live administrator created. Password rotation and MFA enrollment are mandatory before workspace access.');
+    console.log('Live administrator created. Password rotation and authenticator enrollment are available in account settings.');
   }
   await db.commit();
 } catch(e) {await db.rollback();console.error(e.code==='ER_DUP_ENTRY'?'Identity exists; no changes made.':'Bootstrap failed; check protected operator diagnostics and migration status.');process.exitCode=1;}

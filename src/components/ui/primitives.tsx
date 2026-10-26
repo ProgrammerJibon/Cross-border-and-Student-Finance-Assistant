@@ -8,12 +8,12 @@ import {
   Button,
   CircularProgress,
   LinearProgress,
-  TextField,
   MenuItem,
 } from "@mui/material";
 import { FiArrowUpRight, FiInbox, FiX, FiDownload } from "react-icons/fi";
 import { useApp } from "./providers";
 import type { Result, Row } from "@/types";
+import { DialogGuidance, GuidedTextField } from "./dashboard-guidance";
 export function Card({
   children,
   className = "",
@@ -167,7 +167,7 @@ export function FormFields({
   return (
     <div className="form-grid">
       {fields.map((f) => (
-        <TextField
+        <GuidedTextField
           key={f.name}
           name={f.name}
           label={t(f.label || f.name)}
@@ -212,7 +212,7 @@ export function FormFields({
               {t(o.label)}
             </MenuItem>
           ))}
-        </TextField>
+        </GuidedTextField>
       ))}
     </div>
   );
@@ -251,6 +251,7 @@ export function FormDialog({
       >
         <DialogTitle>{t(title)}</DialogTitle>
         <DialogContent>
+          <DialogGuidance title={title}/>
           <div className="dialog-fields">
             <FormFields fields={fields} values={values} setValues={setValues} />
           </div>
@@ -291,7 +292,7 @@ export function Modal({
           <FiX />
         </button>
       </DialogTitle>
-      <DialogContent>{children}</DialogContent>
+      <DialogContent><DialogGuidance title={title}/>{children}</DialogContent>
     </Dialog>
   );
 }

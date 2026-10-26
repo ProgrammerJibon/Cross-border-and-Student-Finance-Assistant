@@ -28,6 +28,7 @@ export function ProfilePhoto({
         accept="image/png,image/jpeg,image/webp"
         required={required && !value}
         aria-label={t("profilePhoto")}
+        title={t("photoHelp")}
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
@@ -44,7 +45,6 @@ export function ProfilePhoto({
           reader.readAsDataURL(file);
         }}
       />
-      <small>{t("photoHelp")}</small>
     </label>
   );
 }

@@ -17,6 +17,7 @@ async function fixture(db:mysql.Connection,role="STUDENT",onboarded=1,demo=0) {
   return id;
 }
 async function login(page:Page,id:string) {
+  await page.context().clearCookies();
   await page.goto("/en/login");
   await page.locator('input[name="email"]').fill(`${id}@example.test`);
   await page.locator('input[name="password"]').fill(password);
@@ -103,7 +104,9 @@ test("Live onboarding, editable profile and tuition, budget isolation, mobile fo
     }
     await page.goto("/en/payments?checkout=00000000-0000-4000-8000-000000000000&cancelled=1");
     await expect(page.getByText(/Checkout was cancelled/)).toBeVisible();
-    await expect(page.getByRole("button",{name:"Gateway Add Money",exact:true})).toBeDisabled();
+    await page.getByRole("button",{name:"Add money",exact:true}).first().click();
+    await select(page,page.getByRole("dialog"),"Deposit type","Gateway");
+    await expect(page.getByRole("dialog").getByRole("button",{name:"Next",exact:true})).toBeDisabled();
   } finally {await db.end();}
 });
 

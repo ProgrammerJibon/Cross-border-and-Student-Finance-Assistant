@@ -13,6 +13,7 @@ import { HostedCheckout, PaymentVerification } from "./hosted-checkout";
 export function ProviderCheckout({plan}:{plan:Row|undefined}) {
   const {t,locale,run}=useApp();const params=useSearchParams();
   const checkout=params.get("checkout");
+  if(params.get("cancelled")==="1") return <><Heading title={t("checkout")} subtitle={t("subscriptionCheckoutCancelled")}/><Link className="button" href={`/${locale}/subscription/checkout?plan=${plan?.id || "student"}`}>{t("back")}</Link></>;
   if(!plan)return <Card>{t("NOT_FOUND")}</Card>;
   return <><Heading title={t("checkout")} subtitle={t("providerCheckoutIntro")}/><div className="checkout-grid"><Card><h2>{t(String(plan.name))}</h2><p>{t(String(plan.description_key))}</p><strong className="metric-value">{formatMoney(String(plan.monthly),String(plan.currency),locale)}</strong><p>{t("perMonth")}</p>{plan.monthly_rmb!=null && <p>{t("approximateRmb")} {formatMoney(String(plan.monthly_rmb),"CNY",locale)}</p>}</Card><Card>{checkout?<PaymentVerification id={checkout}/>:plan.id==="student-free"?<><p>{t("freePlanNote")}</p><button className="button" onClick={()=>run(activateStudentFree)}>{t("chooseFree")}</button></>:<HostedCheckout plan={plan}/>}</Card></div></>;
 }
@@ -20,12 +21,19 @@ export function ProviderPaymentHistory() {
   const { t, locale } = useApp();
   const [payments, setPayments] = useState<Row[]>([]);
   const [error, setError] = useState("");
+  const [revision, setRevision] = useState(0);
+  const search = useSearchParams();
+  useEffect(() => {
+    const refresh = () => setRevision(value => value + 1);
+    window.addEventListener("payment-verified", refresh);
+    return () => window.removeEventListener("payment-verified", refresh);
+  }, []);
   useEffect(() => {
     let active = true;
     void providerPaymentHistory()
       .then((r) => {
         if (active) {
-          if (r.success) setPayments(r.data);
+          if (r.success) {setPayments(r.data);setError("");}
           else setError(resultMessage(r));
         }
       })
@@ -35,7 +43,7 @@ export function ProviderPaymentHistory() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [revision, search]);
   return (
     <Card>
       <h2>{t("providerPaymentHistory")}</h2>

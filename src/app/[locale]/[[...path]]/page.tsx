@@ -32,7 +32,7 @@ import {
 } from "@/components/settings/platform-panels";
 import { publicTeam } from "@/actions/platform.actions";
 import { PaymentsPanel } from "@/components/payments/payments-panel";
-import { AdminSecurity } from "@/components/forms/admin-security";
+import { accountHome } from "@/lib/account-home";
 export const dynamic = "force-dynamic";
 export default async function Page({
   params,
@@ -41,6 +41,7 @@ export default async function Page({
 }) {
   const { locale, path: parts } = await params;
   const path = parts?.join("/") || "home";
+  const user = await currentUser();
   if (
     [
       "home",
@@ -60,14 +61,15 @@ export default async function Page({
         page={path}
         plans={plans?.success ? plans.data : []}
         team={team?.success ? team.data : []}
+        user={user&&!user.is_demo?{name:user.name,email:user.email,role:user.role,onboarded:user.onboarded}:null}
       />
     );
   }
-  if (["login", "register", "forgot-password", "demo"].includes(path))
+  if (["login", "register", "forgot-password", "demo"].includes(path)) {
+    if(user&&!user.is_demo) redirect(`/${locale}/${accountHome(user)}`);
     return <AuthPage page={path} />;
-  const user = await currentUser();
+  }
   if (!user) redirect(`/${locale}/login`);
-  if (user.must_rotate_password) return <AdminSecurity rotate={!!user.must_rotate_password}/>;
   if (!canOpen(user.role, path, user.admin_permissions))
     redirect(
       `/${locale}/${["ADMIN", "MODERATOR"].includes(user.role) ? "admin" : user.role === "PARENT" ? "parent" : "dashboard"}`,

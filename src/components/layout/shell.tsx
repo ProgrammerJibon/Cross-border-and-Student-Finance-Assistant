@@ -1,4 +1,5 @@
 "use client";
+import { GuidedInput } from "@/components/ui/dashboard-guidance";
 import { freePages } from "@/lib/plan-policy";
 import { FooterCredits } from "./footer-credits";
 import { LanguagePicker } from "@/components/ui/language-picker";
@@ -56,6 +57,7 @@ import {
 import {
   resubscribeNotifications,
   showBrowserNotification,
+  sendTestNotification,
 } from "@/components/ui/browser-notifications";
 import { hasPermission } from "@/lib/admin-permissions";
 const subscribeSidebar = (cb: () => void) => {
@@ -300,13 +302,11 @@ export function Shell({
   const testBrowserNotification = async () => {
     setNotificationBusy(true);
     try {
-      if (!("Notification" in window)) throw new Error("notificationUnsupported");
-      if (Notification.permission !== "granted") throw new Error("notificationDenied");
-      await showBrowserNotification(t("notifications"), t("notificationTestBody"), `finbridge-test-${Date.now()}`, path);
+      await sendTestNotification(t("notifications"), t("notificationTestBody"), path);
       setNotificationStatus("notificationTestSent");
     } catch (error) {
       setNotificationStatus(error instanceof Error && error.message.startsWith("notification") ? error.message : "notificationFailed");
-    } finally { setNotificationBusy(false); }
+    } finally { window.dispatchEvent(new Event("notification-permission")); setNotificationBusy(false); }
   };
   const requestBrowserNotifications = async () => {
     setNotificationBusy(true);
@@ -821,7 +821,7 @@ export function Shell({
               setSearched(true);
             }}
           >
-            <input
+            <GuidedInput
               ref={searchInputRef}
               autoFocus
               aria-label={t("search")}

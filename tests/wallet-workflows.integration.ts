@@ -13,7 +13,7 @@ test("isolated wallet and family workflows",async t=>{
   const s=`${prefix}-s`,p=`${prefix}-p`,s2=`${prefix}-s2`,p2=`${prefix}-p2`,admin=`${prefix}-admin`,admin2=`${prefix}-admin2`,live=`${prefix}-live`,la=`${prefix}-la`;
   const wallet=(u:string)=>`${u}-wallet`;
   for(const [user,role,demo] of [[s,"STUDENT",1],[p,"PARENT",1],[s2,"STUDENT",1],[p2,"PARENT",1],[admin,"ADMIN",1],[admin2,"ADMIN",1],[live,"STUDENT",0],[la,"ADMIN",0]] as const){
-    await write("INSERT INTO users(id,name,email,password_hash,role,is_demo,discoverable,mfa_enabled) VALUES (?,?,?,'unused',?,?,1,?)",[user,`Wallet ${user}`,`${user}@example.test`,role,demo,user===la]);
+    await write("INSERT INTO users(id,name,email,password_hash,role,is_demo,discoverable,mfa_enabled) VALUES (?,?,?,'unused',?,?,1,0)",[user,`Wallet ${user}`,`${user}@example.test`,role,demo]);
     await write("INSERT INTO user_preferences(user_id) VALUES (?)",[user]);
     await write("INSERT INTO subscriptions(id,user_id,plan_id,starts_at,ends_at) VALUES (?,?,'family',UTC_TIMESTAMP(),'2099-12-31')",[randomUUID(),user]);
     await write("INSERT INTO accounts(id,user_id,name,type,currency,balance) VALUES (?,?,'Wallet','WALLET','CNY',?)",[wallet(user),user,demo?"1000":"0"]);
@@ -63,16 +63,12 @@ test("isolated wallet and family workflows",async t=>{
     await t.test("external send is rejected",async()=>{
       await assert.rejects(createPaymentDraft(s,{kind:"SEND",method:"PAYPAL",account_id:wallet(s),amount:"5",recipient:"Outside",destination:"outside@example.test",beneficiary_id:null,receive_currency:"CNY",category:"Other",note:""},randomUUID()),/EXTERNAL_SEND_DISABLED/);
     });
-    await t.test("gateway simulation is explicitly Demo-only and credits once",async()=>{
-      const key=randomUUID(),op=await submitWalletOperation(s,input(s),key);
-      assert.equal((await submitWalletOperation(s,input(s),key)).id,op.id);
-      await assert.rejects(submitWalletOperation(s,input(s,"FUNDING_GATEWAY",{amount:"11"}),key),/IDEMPOTENCY_MISMATCH/);
+    await t.test("gateway funding cannot bypass provider checkout in either environment",async()=>{
       const before=String((await rows("SELECT balance FROM accounts WHERE id=?",[wallet(s)]))[0].balance);
-      const results=await Promise.all([reviewWalletOperation(s,op.id,"SIMULATE_GATEWAY"),reviewWalletOperation(s,op.id,"SIMULATE_GATEWAY")]);
-      assert.ok(results.every(r=>r.status==="COMPLETED"));
-      assert.equal(Number((await rows("SELECT balance FROM accounts WHERE id=?",[wallet(s)]))[0].balance),Number(before)+10);
-      await assert.rejects(submitWalletOperation(live,input(live),randomUUID()),/LIVE_RAIL_UNAVAILABLE/);
-      await assert.rejects(reviewWalletOperation(live,op.id,"SIMULATE_GATEWAY"),/ENVIRONMENT_MISMATCH/);
+      await assert.rejects(submitWalletOperation(s,input(s),randomUUID()),/USE_PROVIDER_CHECKOUT/);
+      await assert.rejects(submitWalletOperation(live,input(live),randomUUID()),/USE_PROVIDER_CHECKOUT/);
+      await assert.rejects(reviewWalletOperation(s,randomUUID(),"SIMULATE_GATEWAY"),/USE_PROVIDER_CHECKOUT/);
+      assert.equal(String((await rows("SELECT balance FROM accounts WHERE id=?",[wallet(s)]))[0].balance),before);
     });
     await t.test("manual submissions require evidence review and never credit on submission",async()=>{
       const receiving=(await walletWorkspace(s)).receiving.find(r=>r.method==="UNIONPAY")!;assert.ok(receiving);
@@ -137,7 +133,7 @@ test("isolated wallet and family workflows",async t=>{
       assert.equal((await rows("SELECT operation_id FROM wallet_journal GROUP BY operation_id,phase,currency HAVING SUM(IF(direction='DEBIT',amount,-amount))<>0")).length,0);
       await assert.rejects(write("UPDATE wallet_journal SET amount=1 WHERE operation_id IN (SELECT id FROM wallet_operations WHERE user_id=?)",[s]),/FINANCIAL_HISTORY_IMMUTABLE/);
       await assert.rejects(saveReceivingAccount(la,{method:"ALIPAY",holder:"Live",identifier:"live@example.test",currency:"CNY",instructions:"Trusted account",minimum:"1",maximum:"100",active:true,display_order:0}),/LIVE_RAIL_UNAVAILABLE/);
-      await assert.rejects(submitWalletOperation(s,{...input(s),account_id:wallet(live)},randomUUID()),/NOT_FOUND/);
+      await assert.rejects(submitWalletOperation(s,{...input(s,"FUNDING_MANUAL"),account_id:wallet(live)},randomUUID()),/NOT_FOUND/);
     });
   }finally{await pool.end();}
 });

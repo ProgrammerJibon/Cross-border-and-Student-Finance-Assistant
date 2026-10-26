@@ -1,8 +1,8 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { useApp } from "@/components/ui/providers";
 import { Shell } from "./shell";
 import type { User, Row } from "@/types";
+import { DashboardGuidance, PageGuidance } from "@/components/ui/dashboard-guidance";
 export function WorkspaceFrame({
   user,
   notifications,
@@ -12,7 +12,6 @@ export function WorkspaceFrame({
   notifications: Row[];
   children: React.ReactNode;
 }) {
-  const { t } = useApp();
   const path = usePathname().split("/").slice(2).join("/");
   if (
     !user ||
@@ -34,9 +33,9 @@ export function WorkspaceFrame({
   )
     return children;
   return (
-    <Shell key={user.id} user={user} notifications={notifications}>
-      {!!user.is_demo && <div className="notification-guidance" role="status">{t("demoEnvironmentNotice")}</div>}
+    <DashboardGuidance path={path}><Shell key={user.id} user={user} notifications={notifications}>
       {children}
-    </Shell>
+      <PageGuidance path={path}/>
+    </Shell></DashboardGuidance>
   );
 }

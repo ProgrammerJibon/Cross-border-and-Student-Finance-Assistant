@@ -26,9 +26,8 @@ async function customer(userId:string,db?:DB) {
 }
 async function operator(userId:string,section:"settlements"|"payment-methods",db?:DB) {
   const u=await financialIdentity(userId,db);
-  const [permissions]=await rows<{admin_permissions:string|null;must_rotate_password:number;mfa_enabled:number}>("SELECT admin_permissions,must_rotate_password,mfa_enabled FROM users WHERE id=?",[userId],db);
+  const [permissions]=await rows<{admin_permissions:string|null}>("SELECT admin_permissions FROM users WHERE id=?",[userId],db);
   requireCondition(hasPermission({...u,...permissions},section));
-  requireCondition(u.is_demo || (!permissions.must_rotate_password && permissions.mfa_enabled),"ADMIN_SECURITY_REQUIRED");
   return u;
 }
 export async function validateFundingDraft(userId:string,input:unknown) {
@@ -56,6 +55,7 @@ async function releaseReservation(op:Operation,db:DB) {
 }
 export async function submitWalletOperation(userId:string,input:unknown,key:string) {
   const v=inputSchema.parse(input);z.string().min(8).max(100).parse(key);
+  requireCondition(v.kind !== "FUNDING_GATEWAY", "USE_PROVIDER_CHECKOUT");
   const hash=digest(JSON.stringify(v));
   return atomic(async db=>{
     await rows("SELECT id FROM users WHERE id=? FOR UPDATE",[userId],db);
@@ -76,8 +76,6 @@ export async function submitWalletOperation(userId:string,input:unknown,key:stri
       validateIdentifier(v.method,v.identifier);
       const [duplicate]=await rows("SELECT id FROM wallet_operations WHERE receiving_account_id=? AND reference_hash=?",[v.receiving_account_id,digest(v.reference)],db);
       requireCondition(!duplicate,"DUPLICATE_REFERENCE");
-    } else if(v.kind==="FUNDING_GATEWAY") {
-      requireCondition(["STRIPE","PAYPAL"].includes(v.method),"PAYMENT_METHOD_DISABLED");
     } else {
       requireCondition(manualMethods.includes(v.method as typeof manualMethods[number]),"PAYMENT_METHOD_DISABLED");
       validateIdentifier(v.method,v.identifier);
@@ -86,7 +84,7 @@ export async function submitWalletOperation(userId:string,input:unknown,key:stri
       parents=await checkWithdrawalRisk(userId,v.account_id,v.amount,wallet.currency,db);
     }
     const op:Operation={id:randomUUID(),user_id:userId,account_id:v.account_id,environment:user.environment,kind:v.kind,method:v.method,
-      amount:D(v.amount).toFixed(2),currency:wallet.currency,status:v.kind==="WITHDRAWAL_MANUAL"?(parents.length?"WAITING_PARENT":"PENDING_REVIEW"):v.kind==="FUNDING_GATEWAY"?"DRAFT":"PENDING_VERIFICATION",input_hash:hash,operator_id:null};
+      amount:D(v.amount).toFixed(2),currency:wallet.currency,status:v.kind==="WITHDRAWAL_MANUAL"?(parents.length?"WAITING_PARENT":"PENDING_REVIEW"):"PENDING_VERIFICATION",input_hash:hash,operator_id:null};
     await write(`INSERT INTO wallet_operations(id,user_id,account_id,environment,kind,method,amount,currency,status,receiving_account_id,details_cipher,reference_hash,idempotency_key,input_hash)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,[op.id,userId,v.account_id,user.environment,v.kind,v.method,op.amount,wallet.currency,op.status,v.kind==="FUNDING_MANUAL"?v.receiving_account_id:null,
       encryptSecret(JSON.stringify({holder:v.holder,identifier:v.identifier,reference:v.reference})),v.kind==="FUNDING_MANUAL"?digest(v.reference):null,key,hash],db);
@@ -102,12 +100,14 @@ export async function submitWalletOperation(userId:string,input:unknown,key:stri
   });
 }
 export async function reviewWalletOperation(actorId:string,operationId:string,decision:string,evidence:unknown={}) {
-  id.parse(operationId);z.enum(["PROCESSING","EVIDENCE_RECORDED","COMPLETED","REJECTED","CANCELLED","SIMULATE_GATEWAY","PARENT_APPROVE","PARENT_REJECT"]).parse(decision);
+  requireCondition(decision !== "SIMULATE_GATEWAY", "USE_PROVIDER_CHECKOUT");
+  id.parse(operationId);z.enum(["PROCESSING","EVIDENCE_RECORDED","COMPLETED","REJECTED","CANCELLED","PARENT_APPROVE","PARENT_REJECT"]).parse(decision);
   return atomic(async db=>{
     // Always lock user, then operation, then wallet: consistent with submission.
     const [preview]=await rows<Operation>("SELECT * FROM wallet_operations WHERE id=?",[operationId],db);requireCondition(preview,"NOT_FOUND");
     await rows("SELECT id FROM users WHERE id=? FOR UPDATE",[preview.user_id],db);
     const [op]=await rows<Operation>("SELECT * FROM wallet_operations WHERE id=? FOR UPDATE",[operationId],db);
+    requireCondition(op.kind !== "FUNDING_GATEWAY" || decision === "CANCELLED", "USE_PROVIDER_CHECKOUT");
     await requireSameEnvironment(actorId,op.user_id,db);
     const owner=op.user_id===actorId;
     if(decision.startsWith("PARENT_")) {
@@ -124,9 +124,9 @@ export async function reviewWalletOperation(actorId:string,operationId:string,de
       }
       return {id:op.id,status:op.status};
     }
-    if(decision!=="CANCELLED"&&decision!=="SIMULATE_GATEWAY") await operator(actorId,"settlements",db);
+    if(decision!=="CANCELLED") await operator(actorId,"settlements",db);
     else requireCondition(owner);
-    if(op.status===decision || (decision==="SIMULATE_GATEWAY"&&op.status==="COMPLETED")) return {id:op.id,status:op.status};
+    if(op.status===decision) return {id:op.id,status:op.status};
     if(["REJECTED","CANCELLED"].includes(decision)) {
       requireCondition(["DRAFT","PENDING_REVIEW","PENDING_VERIFICATION","WAITING_PARENT"].includes(op.status),"INVALID_STATE");
       if(op.kind==="WITHDRAWAL_MANUAL") {
@@ -154,7 +154,7 @@ export async function reviewWalletOperation(actorId:string,operationId:string,de
       await write("UPDATE wallet_operations SET evidence_cipher=? WHERE id=?",[encryptSecret(JSON.stringify(proof)),op.id],db);
       await event(op,actorId,"PAID_PENDING_VERIFICATION",db);
     } else {
-      requireCondition(decision==="SIMULATE_GATEWAY" ? op.kind==="FUNDING_GATEWAY"&&op.status==="DRAFT" : op.status==="PAID_PENDING_VERIFICATION","INVALID_STATE");
+      requireCondition(op.status==="PAID_PENDING_VERIFICATION","INVALID_STATE");
       const [wallet]=await rows("SELECT id FROM accounts WHERE id=? AND archived=0 FOR UPDATE",[op.account_id],db);requireCondition(wallet,"ACCOUNT_INACTIVE");
       if(op.kind==="WITHDRAWAL_MANUAL") {
         const changed=await write("UPDATE accounts SET reserved_balance=reserved_balance-? WHERE id=? AND reserved_balance>=?",[op.amount,op.account_id,op.amount],db);

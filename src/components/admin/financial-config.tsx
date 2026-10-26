@@ -1,4 +1,5 @@
 "use client";
+import { GuidedInput, GuidedSelect } from "@/components/ui/dashboard-guidance";
 import { parseJson } from "@/lib/json";
 import { useState } from "react";
 import { Card, FormDialog, DataCards, Modal } from "@/components/ui/primitives";
@@ -74,23 +75,23 @@ export function FinancialConfig({ data }: { data: Workspace }) {
         </div>
         <label>
           {t("source_currency")}
-          <select value={source} onChange={(e) => setSource(e.target.value)}>
+          <GuidedSelect name="source" value={source} onChange={(e) => setSource(e.target.value)}>
             {currencies.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
               </option>
             ))}
-          </select>
+          </GuidedSelect>
         </label>
         <label>
           {t("target_currency")}
-          <select value={target} onChange={(e) => setTarget(e.target.value)}>
+          <GuidedSelect name="target" value={target} onChange={(e) => setTarget(e.target.value)}>
             {currencies.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.label}
               </option>
             ))}
-          </select>
+          </GuidedSelect>
         </label>
         <DataCards
           rows={(d.corridors || []).filter((c) => c.source_currency === source)}
@@ -188,7 +189,7 @@ export function FinancialConfig({ data }: { data: Workspace }) {
           >
             <label>
               {t("country")}
-              <select
+              <GuidedSelect
                 value={country}
                 onChange={(e) => {
                   setCountry(e.target.value);
@@ -203,12 +204,12 @@ export function FinancialConfig({ data }: { data: Workspace }) {
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </GuidedSelect>
             </label>
             <div className="stack">
               {keys.map((k) => (
                 <label key={k}>
-                  <input
+                  <GuidedInput
                     type="checkbox"
                     checked={tasks.includes(k)}
                     onChange={(e) =>

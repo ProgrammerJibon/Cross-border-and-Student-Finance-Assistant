@@ -15,9 +15,9 @@ test('wallet modal, pending manual deposit, operator review and withdrawal cance
       await db.execute("INSERT INTO subscriptions(id,user_id,plan_id,starts_at,ends_at) VALUES (?,?,'student',UTC_TIMESTAMP(),'2099-12-31')",[randomUUID(),id]);
     }
     await db.execute("INSERT INTO accounts(id,user_id,name,type,currency,balance) VALUES (?,?,'Browser wallet','WALLET','CNY',100)",[`${customer}-wallet`,customer]);
-    const login=async(id:string)=>{await page.goto('/en/login');await page.getByRole('textbox',{name:'Email address',exact:true}).fill(`${id}@example.test`);await page.getByRole('textbox',{name:'Password',exact:true}).fill(password);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page).toHaveURL(id===admin?/\/admin$/:/\/dashboard$/);};
+    const login=async(id:string)=>{await page.context().clearCookies();await page.goto('/en/login');await page.getByRole('textbox',{name:'Email address',exact:true}).fill(`${id}@example.test`);await page.getByRole('textbox',{name:'Password',exact:true}).fill(password);await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page).toHaveURL(id===admin?/\/admin$/:/\/dashboard$/);};
     await login(customer);await page.goto('/en/payments');
-    await page.getByRole('button',{name:'Manual Add Money',exact:true}).first().click();
+    await page.getByRole('button',{name:'Add money',exact:true}).first().click();
     let dialog=page.getByRole('dialog');
     await dialog.getByRole('spinbutton',{name:'Amount',exact:true}).fill('10');
     await dialog.getByRole('combobox',{name:'Deposit type'}).click();await page.getByRole('option',{name:'Manual',exact:true}).click();

@@ -24,7 +24,7 @@ export async function checkoutOptions(input: unknown) {
     requireCondition(["STUDENT", "PARENT"].includes(u.role));
     const parsed = selection.parse(input);
     const v = {...parsed, environment: await checkoutEnvironment(u.id, parsed.environment)};
-    await requirePlanPurchase(u.id, v.plan);
+    await requirePlanPurchase(u.id, v.plan, undefined, v.environment === "sandbox");
     const [pending] = await rows<Checkout>("SELECT * FROM provider_checkouts WHERE user_id=? AND recurring=1 AND status='CREATED' AND plan_id=? AND cycle=? AND environment=? AND extra_seats=? LIMIT 1",[u.id,v.plan,v.cycle,v.environment,v.extraSeats]);
     return {
       ...(pending ? {amount:pending.amount,currency:pending.currency} : await planQuote(v.plan, v.cycle, undefined, v.extraSeats)),
@@ -52,7 +52,7 @@ export async function startProviderCheckout(input: unknown) {
     );
     const checkout = await atomic(async (db) => {
       await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
-      await requirePlanPurchase(u.id, v.plan, db);
+      await requirePlanPurchase(u.id, v.plan, db, v.environment === "sandbox");
       const [old] = await rows<Checkout>(
         "SELECT * FROM provider_checkouts WHERE id=?",
         [v.id],

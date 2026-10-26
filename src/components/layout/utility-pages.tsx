@@ -1,4 +1,5 @@
 "use client";
+import { GuidedSelect } from "@/components/ui/dashboard-guidance";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -131,7 +132,7 @@ export function WalletPage({ data }: { data: Workspace }) {
           </div>
           <label>
             {t("currency")}{" "}
-            <select
+            <GuidedSelect
               value={historyCurrency}
               onChange={(e) => setHistoryCurrency(e.target.value)}
               aria-label={t("fxHistory")}
@@ -144,7 +145,7 @@ export function WalletPage({ data }: { data: Workspace }) {
                     {c.value}
                   </option>
                 ))}
-            </select>
+            </GuidedSelect>
           </label>
         </div>
         {history.length ? (
@@ -514,6 +515,7 @@ export function SettingsPage({ data }: { data: Workspace }) {
   return (
     <>
       <Heading title={t("settings")} />
+      {!!data.user.must_rotate_password && <AdminSecurity rotate />}
       {data.user.mfa_enabled ? <p role="status">{t("mfaEnabled")}</p> : <AdminSecurity rotate={false} />}
       <div className="two-grid">
         <Card>

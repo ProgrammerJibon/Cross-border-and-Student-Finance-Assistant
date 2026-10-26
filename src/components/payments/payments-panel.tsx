@@ -1,4 +1,5 @@
 "use client";
+import { GuidedInput, GuidedSelect } from "@/components/ui/dashboard-guidance";
 import { WalletWorkspace } from "./wallet-workspace";
 import { HostedCheckout, PaymentVerification } from "@/components/billing/hosted-checkout";
 import { GatewaySettings } from "./gateway-settings";
@@ -643,7 +644,7 @@ export function LegacyPaymentsPanel({
               <>
                 <label>
                   {t("savedCards")}
-                  <select
+                  <GuidedSelect
                     aria-label={t("savedCards")}
                     value={form.savedCardId}
                     onChange={(e) =>
@@ -656,7 +657,7 @@ export function LegacyPaymentsPanel({
                         {c.label} · {c.last_four}
                       </option>
                     ))}
-                  </select>
+                  </GuidedSelect>
                 </label>
                 {!form.savedCardId && (
                   <>
@@ -685,7 +686,7 @@ export function LegacyPaymentsPanel({
                       setValues={setForm}
                     />
                     <label className="checkbox-row">
-                      <input
+                      <GuidedInput
                         type="checkbox"
                         checked={saveCard}
                         onChange={(e) => setSaveCard(e.target.checked)}

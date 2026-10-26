@@ -29,14 +29,17 @@ import {
 import { Card, Badge, Progress } from "@/components/ui/primitives";
 import { Plans } from "@/components/billing/subscription-page";
 import type { Row } from "@/types";
+import { PublicAccountMenu, type PublicAccount } from "./public-account-menu";
 export function PublicPage({
   page,
   plans,
   team = [],
+  user = null,
 }: {
   page: string;
   plans: Row[];
   team?: Row[];
+  user?: PublicAccount | null;
 }) {
   const { t, locale } = useApp();
   const href = (p: string) => `/${locale}/${p}`;
@@ -65,13 +68,14 @@ export function PublicPage({
         <div className="button-group">
           <LanguageSwitch />
           <ThemeToggle />
-          <Link className="text-link desktop-only" href={href("login")}>
+          {user ? <PublicAccountMenu user={user}/> : <><Link className="text-link desktop-only" href={href("login")}>
             {t("login")}
           </Link>
           <Link className="button small-button" href={href("demo")}>
             {t("demo")}
             <FiArrowUpRight />
           </Link>
+          </>}
         </div>
       </header>
       <main className="public-main">

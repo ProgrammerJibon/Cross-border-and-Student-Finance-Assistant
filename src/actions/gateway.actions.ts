@@ -8,6 +8,21 @@ import { audit } from "@/lib/audit";
 import { gatewayConfig, type GatewayConfig } from "@/services/gateway-config.service";
 import { checkoutOrigin, paypal, stripe } from "@/services/checkout-provider.service";
 const environmentSchema = z.enum(["sandbox", "live"]);
+export async function getGatewayOverview() {
+  return action(async () => {
+    await requireAdmin("payment-methods");
+    // Demo administrators may see configuration status, never credentials.
+    const result = [];
+    for (const environment of ["live", "sandbox"] as const) {
+      const config = await gatewayConfig(environment);
+      for (const provider of ["STRIPE", "PAYPAL"] as const) {
+        const credentials = provider === "STRIPE" ? !!config.stripeSecret : !!(config.paypalClientId && config.paypalSecret);
+        if (credentials) result.push({provider, environment, webhookConfigured: provider === "STRIPE" ? !!config.stripeWebhookSecret : !!config.paypalWebhookId});
+      }
+    }
+    return result;
+  });
+}
 export async function getGatewaySettings(environment: unknown) {
   return action(async () => {
     const u = await requireAdmin("payment-methods");

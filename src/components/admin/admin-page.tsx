@@ -1,7 +1,8 @@
 "use client";
+import { GuidedTextField as TextField } from "@/components/ui/dashboard-guidance";
 import { FinancialConfig } from "./financial-config";
 import { useState } from "react";
-import { TextField, MenuItem } from "@mui/material";
+import { MenuItem } from "@mui/material";
 import { FiPlus, FiShield, FiUsers, FiZap, FiFlag } from "react-icons/fi";
 import { useApp } from "@/components/ui/providers";
 import {

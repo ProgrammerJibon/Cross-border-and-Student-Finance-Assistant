@@ -178,6 +178,12 @@ test("shared financial state machine: approvals, settlement, concurrency, balanc
         ]) {
           const before = await balance(parent);
           const r = await draft(parent, "TOPUP", method, "25");
+          if (method === "PAYPAL") {
+            await assert.rejects(confirmPayment(parent, r.id, {}, `DEPOSIT-${method}`), /USE_PROVIDER_CHECKOUT/);
+            await assert.rejects(settlePayment(admin, r.id, "COMPLETED", "Manual override", "receipt"), /USE_PROVIDER_CHECKOUT/);
+            assert.equal(await balance(parent), before);
+            continue;
+          }
           assert.equal(
             (await confirmPayment(parent, r.id, {}, `DEPOSIT-${method}`))
               .status,

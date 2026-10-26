@@ -1,9 +1,10 @@
 "use client";
+import { GuidedInput, GuidedTextField as TextField } from "@/components/ui/dashboard-guidance";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { FiPlus, FiUpload, FiSearch } from "react-icons/fi";
 import Papa from "papaparse";
-import { TextField, MenuItem } from "@mui/material";
+import { MenuItem } from "@mui/material";
 import { useApp } from "@/components/ui/providers";
 import {
   Heading,
@@ -323,7 +324,7 @@ function CsvImport({
   return (
     <Modal title={t("importCsv")} onClose={onClose} wide>
       <p className="muted">{t("csvHelp")}</p>
-      <input
+      <GuidedInput
         type="file"
         accept=".csv,text/csv"
         aria-label={t("importCsv")}

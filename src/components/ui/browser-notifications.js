@@ -28,7 +28,8 @@ export async function enableNotifications() {
   if (!window.isSecureContext) throw new Error("notificationSecure");
   if (!("Notification" in window)) throw new Error("notificationUnsupported");
   // Request directly in the click handler, before asynchronous worker setup.
-  const permission = await Notification.requestPermission();
+  const permission = Notification.permission === "granted" || Notification.permission === "denied"
+    ? Notification.permission : await Notification.requestPermission();
   if (permission !== "granted")
     throw new Error(
       permission === "denied" ? "notificationDenied" : "notificationDismissed",
@@ -54,6 +55,8 @@ export async function resubscribeNotifications() {
 }
 
 export async function showBrowserNotification(title, body, tag, url) {
+  if (!("Notification" in window)) throw new Error("notificationUnsupported");
+  if (Notification.permission !== "granted") throw new Error("notificationDenied");
   const registration = await notificationRegistration();
   await registration.showNotification(title, {
     body,
@@ -61,4 +64,9 @@ export async function showBrowserNotification(title, body, tag, url) {
     icon: "/icons/icon-192.png",
     data: { url },
   });
+}
+
+export async function sendTestNotification(title, body, url) {
+  await enableNotifications();
+  await showBrowserNotification(title, body, `finbridge-test-${Date.now()}`, url);
 }

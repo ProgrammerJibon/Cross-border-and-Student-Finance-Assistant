@@ -1,4 +1,5 @@
 "use client";
+import { GuidedInput, GuidedSelect } from "@/components/ui/dashboard-guidance";
 import { useState } from "react";
 import {
   Card,
@@ -66,7 +67,7 @@ export function ModelManager({
       {!shared && (
         <label className="model-select">
           {t("selectedModel")}
-          <select
+          <GuidedSelect
             aria-label={t("selectedModel")}
             value={data.user.ai_model_id || ""}
             disabled={savingModel}
@@ -87,7 +88,7 @@ export function ModelManager({
                   {m.owner_id ? t("personal") : t("shared")}
                 </option>
               ))}
-          </select>
+          </GuidedSelect>
         </label>
       )}
       {testResult && <p role="status">{t(testResult)}</p>}
@@ -316,7 +317,7 @@ export function CatalogAdmin({ data }: { data: Workspace }) {
   return (
     <>
       <Heading title={t("catalog")} subtitle={t("catalogHelp")} />
-      <input
+      <GuidedInput
         className="catalog-search"
         aria-label={t("search")}
         placeholder={t("search")}
@@ -510,7 +511,7 @@ export function TeamAdmin({ data }: { data: Workspace }) {
                 .filter((s) => s !== "team")
                 .map((section) => (
                   <label key={section}>
-                    <input
+                    <GuidedInput
                       type="checkbox"
                       checked={permissions.includes(section)}
                       onChange={(e) =>

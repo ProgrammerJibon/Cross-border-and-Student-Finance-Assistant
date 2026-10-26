@@ -18,8 +18,10 @@ function browser(permission = "granted", secure = true) {
   const context = vm.createContext({
     window: { isSecureContext: secure, Notification: {} },
     Notification: {
+      permission: "default",
       requestPermission: async () => {
         calls.push(["permission"]);
+        context.Notification.permission = permission;
         return permission;
       },
     },
@@ -55,6 +57,26 @@ test("mobile notifications use the service worker with a destination and stable 
       data: { url: "/en/tuition" },
     },
   ]);
+});
+test("test notification requests permission and actually invokes device delivery", async () => {
+  const { context, calls } = browser();
+  await vm.runInContext('sendTestNotification("FinBridge", "Test delivery", "/en/payments")', context);
+  assert.equal(calls[0][0], "permission");
+  const delivery = calls.find(call => call[0] === "FinBridge");
+  assert.ok(delivery);
+  assert.match((delivery[1] as {tag:string}).tag, /^finbridge-test-/);
+  context.Notification.permission = "granted";
+  await vm.runInContext('sendTestNotification("FinBridge", "Again", "/en/payments")', context);
+  assert.equal(calls.filter(call => call[0] === "permission").length, 1);
+});
+test("test delivery reports device errors and blocked permissions without claiming success", async () => {
+  const { context, calls } = browser();
+  context.Notification.permission = "denied";
+  await assert.rejects(vm.runInContext('sendTestNotification("Test", "Body", "/")', context), {message:"notificationDenied"});
+  assert.equal(calls.length, 0);
+  context.Notification.permission = "granted";
+  context.navigator.serviceWorker.ready = Promise.resolve({showNotification: async () => {throw new Error("Device unavailable");}});
+  await assert.rejects(vm.runInContext('sendTestNotification("Test", "Body", "/")', context), {message:"Device unavailable"});
 });
 test("blocked, dismissed and insecure permissions produce actionable failures", async () => {
   for (const [permission, secure, message] of [

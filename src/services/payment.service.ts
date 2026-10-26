@@ -605,8 +605,7 @@ export async function confirmPayment(
     requireCondition(r.user_id === userId);
     await customer(userId, db);
     await requireDemoFinance(userId, db);
-    const [owner] = await rows<{is_demo:number}>("SELECT is_demo FROM users WHERE id=?",[userId],db);
-    requireCondition(owner.is_demo || r.kind !== "TOPUP" || !["UNIONPAY","STRIPE","PAYPAL","ALIPAY","WECHAT","CARD"].includes(r.method), "USE_PROVIDER_CHECKOUT");
+    requireCondition(r.kind !== "TOPUP" || !["STRIPE","PAYPAL"].includes(r.method), "USE_PROVIDER_CHECKOUT");
     if (r.status !== "DRAFT") return { id: r.id, status: r.status };
     requireCondition(
       Date.now() - new Date(r.created_at.replace(" ", "T") + "Z").getTime() <
@@ -768,6 +767,7 @@ export async function settlePayment(
     await requireDemoFinance(r.user_id, db);
     const [hosted] = await rows("SELECT id FROM provider_checkouts WHERE request_id=?",[id],db);
     requireCondition(!hosted,"USE_PROVIDER_CHECKOUT");
+    requireCondition(r.kind !== "TOPUP" || !["STRIPE","PAYPAL"].includes(r.method), "USE_PROVIDER_CHECKOUT");
     requireCondition(canSettle(r.status, status), "INVALID_STATE");
     if (status === "COMPLETED") {
       requireCondition(

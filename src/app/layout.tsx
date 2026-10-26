@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { appConfig } from "@/lib/config";
 import "./globals.css";
-import "./design-refresh.css";
 export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "FinBridge", statusBarStyle: "default" },
   icons: {

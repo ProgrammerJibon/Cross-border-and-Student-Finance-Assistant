@@ -1,5 +1,6 @@
 "use client";
 import { MenuItem, Select } from "@mui/material";
+import { useFieldHelp } from "./dashboard-guidance";
 import type { Locale } from "@/lib/config";
 
 function Flag({ locale }: { locale: Locale }) {
@@ -64,8 +65,11 @@ export function LanguagePicker({
   label: string;
   onChange: (value: Locale) => void;
 }) {
+  const help = useFieldHelp({name:"language",select:true});
   return (
     <Select
+      title={help}
+      SelectDisplayProps={{title:help}}
       size="small"
       className="language-select"
       sx={{
@@ -73,7 +77,7 @@ export function LanguagePicker({
         width: "auto",
         padding: 0,
         "& fieldset": { border: "0 !important" },
-        "&.Mui-focused": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 },
+        "&.Mui-focused": { outline: "none" },
         "& .MuiSelect-select:focus": { backgroundColor: "transparent" },
         "& .MuiSelect-select": { py: 0.8, pl: 1, pr: "28px !important" },
       }}

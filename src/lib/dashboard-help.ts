@@ -1,0 +1,53 @@
+export const pageHelp: Record<string, string> = {
+  dashboard: "overview", money: "money", wallet: "wallet", transactions: "transactions",
+  payments: "payments", transfer: "payments", beneficiaries: "beneficiaries",
+  tuition: "tuition", budget: "budget", credit: "credit", "api-keys": "models",
+  alerts: "alerts", activity: "activity", family: "family", parent: "parent",
+  "parent/students": "parent", "parent/approvals": "approvals", "parent/controls": "controls",
+  subscription: "subscription", "subscription/checkout": "checkout", settings: "settings",
+  reports: "reports", "security-assessment": "security", "project-evidence": "evidence",
+  admin: "admin", "admin/users": "users", "admin/plans": "plans",
+  "admin/subscriptions": "subscriptions", "admin/reports": "adminReports",
+  "admin/risk": "risk", "admin/agent": "agentAdmin", "admin/finance": "finance",
+  "admin/audit": "audit", "admin/settings": "settings", "admin/catalog": "catalog",
+  "admin/models": "sharedModels", "admin/team": "team", "admin/settlements": "settlements",
+  "admin/payment-methods": "gateways",
+};
+// Labels override names so shared fields can explain their specific purpose.
+const fieldGroups: Record<string, string[]> = {
+  amount: ["amount", "minimum", "maximum", "monthly", "yearly", "monthly_rmb", "extra_rmb", "limit_amount"],
+  currency: ["currency", "currency_code", "preferred_currency", "home_currency", "study_currency", "tuition_currency", "source", "target", "receive_currency"],
+  wallet: ["account_id", "account", "sourceWallet", "destinationWallet", "source_account_id", "destination_account_id"],
+  recipient: ["recipient", "recipient_id", "parent", "parent_id", "student", "student_id", "beneficiary_id"],
+  recipientSearch: ["recipientSearch", "query"], search: ["search", "filter"],
+  method: ["method", "provider", "choosePaymentMethod"], deposit: ["depositType"],
+  receiving: ["receivingAccounts", "receiving_account_id"], holder: ["holder", "senderName", "recipientAccountName"],
+  identifier: ["identifier", "senderIdentifier", "recipientAccountId", "destination"],
+  reference: ["reference", "transactionId", "settlementEvidence"], evidence: ["settled_at", "payee_verified", "payeeVerified"],
+  name: ["name", "label", "title", "beneficiaryName"], email: ["email", "new_email"],
+  password: ["password", "current", "currentPassword", "newPassword", "confirmPassword"],
+  code: ["code", "mfaCode", "token", "invitationToken"],
+  note: ["note", "notes", "description", "reason", "instructions", "message", "bio"],
+  date: ["date", "due_date", "dueDate", "starts_at", "ends_at", "from", "to", "start_date", "end_date"],
+  category: ["category"], type: ["type", "kind"], country: ["country", "country_code", "home_country", "study_country"],
+  timezone: ["timezone"], language: ["language", "locale"],
+  model: ["model", "ai_model_id", "selectedModel", "company"], apiKey: ["api_key", "apiKey", "key"],
+  stripeSecret: ["stripeSecret"], stripePublic: ["stripePublishableKey"], stripeWebhook: ["stripeWebhookSecret"],
+  paypalClient: ["paypalClientId"], paypalSecret: ["paypalSecret"], paypalWebhook: ["paypalWebhookId"],
+  enabled: ["active", "enabled", "status"], order: ["display_order", "sort_order"],
+  seats: ["extraSeats", "additionalProStudents"], consent: ["authorizeSubscription", "authorizePayment"],
+  threshold: ["threshold", "daily_limit", "monthly_limit", "dailyLimit", "monthlyLimit", "auto_approve"],
+  visibility: ["visibility", "scope", "permission", "admin_permissions"],
+  rate: ["rate", "spread", "fee", "fee_fixed", "fee_percent", "apr", "interest_rate"],
+  url: ["url", "endpoint", "base_url", "avatar_url", "photo_url"],
+};
+export const fieldHelp = Object.fromEntries(Object.entries(fieldGroups).flatMap(([key, names]) => names.map(name => [name, key])));
+const dialogGroups: Record<string, string[]> = {
+  funding: ["addMoney", "gatewayAddMoney", "manualAddMoney"], send: ["sendInternal", "confirmAndSend", "reviewConfirm"],
+  withdraw: ["withdrawMoney"], support: ["requestMoney"], beneficiary: ["addBeneficiary"], receiving: ["receivingAccounts"],
+  evidence: ["recordEvidence", "viewPaymentDetails", "paymentHistory"], account: ["addAccount", "editAccount"],
+  transaction: ["addTransaction", "editTransaction"], import: ["importCsv"],
+  family: ["inviteParent", "inviteStudent", "invitationToken", "parentalControls", "editControls"],
+  model: ["addModel", "editModel"], password: ["changePassword"], notifications: ["notifications"], search: ["search"], quick: ["quickAction"],
+};
+export const dialogHelp = Object.fromEntries(Object.entries(dialogGroups).flatMap(([key, names]) => names.map(name => [name, key])));

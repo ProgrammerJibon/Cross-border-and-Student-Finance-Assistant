@@ -30,7 +30,6 @@ export async function requireLiveAdmin(section: AdminSection) {
 export async function requireUser(role?: Role) {
   const u = await currentUser();
   if (!u) throw new AppError("UNAUTHORIZED");
-  if (u.must_rotate_password) throw new AppError("ADMIN_SECURITY_REQUIRED");
   if (role && u.role !== role) throw new AppError("FORBIDDEN");
   return u;
 }

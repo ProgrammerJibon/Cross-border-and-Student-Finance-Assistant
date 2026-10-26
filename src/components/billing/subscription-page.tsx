@@ -1,9 +1,8 @@
 "use client";
 import { familyPlans } from "@/lib/plan-policy";
-import { simulateSubscription } from "@/actions/demo.actions";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FiCheck, FiLock } from "react-icons/fi";
+import { FiCheck, FiX } from "react-icons/fi";
 import { useApp } from "@/components/ui/providers";
 import {
   Card,
@@ -46,21 +45,21 @@ export function Plans({
             <small>{t("perMonth")}</small>
           </div>
           {p.monthly_rmb != null && <p className="muted">{t("approximateRmb")} {formatMoney(String(p.monthly_rmb), "CNY", locale)} {t("perMonth")}</p>}
-          <ul className="plan-features">{(p.id === "student-free" ? ["freeSharedAi", "freeSidebar", "freeBeneficiaries", "freeWallets", "freeBudgets", "freeChats"] : p.id === "student" ? ["proAllFeatures", "proSharedAi"] : p.id === "family" ? ["liteProSeats", "liteFreeSeats", "familyControls"] : ["familyProSeats", "familyFreeSeats", "familyControls", "familyExtraSeats"]).map(key => <li key={key}><FiCheck /><span>{t(key)}</span></li>)}</ul>
+          <ul className="plan-features">{(p.id === "student-free" ? ["freeSharedAi", "freeSidebar", "freeBeneficiaries", "freeWallets", "freeBudgets", "freeChats"] : p.id === "student" ? ["proAllFeatures", "proSharedAi"] : p.id === "family" ? ["liteProSeats", "liteFreeSeats", "familyControls"] : ["familyProSeats", "familyFreeSeats", "familyControls", "familyExtraSeats"]).map(key => <li key={key} className={["freeSharedAi", "freeSidebar"].includes(key)?"plan-unavailable":""}>{["freeSharedAi", "freeSidebar"].includes(key)?<FiX aria-label={t("notIncluded")}/>:<FiCheck aria-label={t("included")}/>}<span>{t(key)}</span></li>)}</ul>
           {p.id === "family-pro" && <p>{t("extraSeatPrice")} {formatMoney("256", "BDT", locale)} / {t("perMonth")} ({t("approximateRmb")} {formatMoney(String(p.extra_rmb || "0"), "CNY", locale)})</p>}
           <details open className="plan-quotas"><summary>{t("planQuotas")}</summary><ul>
             {Object.entries(
               parseJson<Record<string, number>>(p.limits, {}),
             ).map(([k, v]) => (
-              <li key={k}>
-                {v > 0 ? <FiCheck /> : <FiLock />}
+              <li key={k} className={v > 0 ? "" : "plan-unavailable"}>
+                {v > 0 ? <FiCheck aria-label={t("included")}/> : <FiX aria-label={t("notIncluded")}/>}
                 <span>{t(k)}</span>
                 <b>{v}</b>
               </li>
             ))}
           </ul></details>
           <Link
-            className={`button full ${p.recommended ? "" : "secondary"}`}
+            className={`button full plan-choose ${p.recommended ? "" : "secondary"}`}
             href={`/${locale}/${publicPage || p.id === "trial" ? "register" : `subscription/checkout?plan=${p.id}`}`}
           >
             {t(
@@ -91,7 +90,7 @@ export function SubscriptionPage({
       (p) => p.id === (data.user.role === "PARENT" ? "family" : "student"),
     )!;
   const sub = data.subscription[0];
-  const locked = !!data.user.is_demo || !!sub?.sponsored_by;
+  const locked = !!sub?.sponsored_by;
   const availablePlans = data.plans.filter((p) =>
     data.user.role === "PARENT"
       ? familyPlans.includes(String(p.id))
@@ -111,7 +110,7 @@ export function SubscriptionPage({
         title={t("subscription")}
         subtitle={t(
           data.user.is_demo
-            ? "demoPlanLocked"
+            ? "sandboxSubscriptionHelp"
             : sub?.sponsored_by
               ? "familyIncluded"
               : data.user.role === "PARENT"
@@ -119,7 +118,6 @@ export function SubscriptionPage({
                 : "studentUpgradeHelp",
         )}
       />
-      {!!data.user.is_demo && <Card><p>{t("demoEnvironmentNotice")}</p><div className="button-group">{availablePlans.map(p=><button key={String(p.id)} className="button secondary" onClick={()=>run(()=>simulateSubscription({id:crypto.randomUUID(),plan:p.id}),{refresh:true})}>{t("simulateSubscription")} · {t(String(p.name))}</button>)}</div></Card>}
       <Card>
         <div className="between">
           <div>
