@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
 import { rows,write,atomic,pool } from "../src/lib/db";
+import { financeRecordsSource } from "../src/lib/finance-records";
 import { recordBudgetEntry } from "../src/services/budget-records.service";
 import { prepareGatewayTopup } from "../src/services/gateway-topup.service";
 import { getTopupQuote,initiateTopup } from "../src/services/topup-checkout.service";
@@ -25,7 +26,7 @@ test("budget isolation and full provider protocol with controlled provider respo
         for(const type of ["INCOME","EXPENSE"]) await atomic(db=>recordBudgetEntry(user,{account_id:user,description:"Budget observation",amount:"100",category:"Other",type,date:"2026-10-25",notes:""},db));
         assert.equal(await balance(user),"0.00");
         assert.equal(Number((await rows("SELECT COUNT(*) n FROM transactions WHERE user_id=?",[user]))[0].n),0);
-        assert.equal(Number((await rows("SELECT COUNT(*) n FROM finance_records WHERE user_id=? AND record_source='BUDGET'",[user]))[0].n),2);
+        assert.equal(Number((await rows(`SELECT COUNT(*) n FROM ${financeRecordsSource} WHERE user_id=? AND record_source='BUDGET'`,[user]))[0].n),2);
       }
       await assert.rejects(atomic(db=>recordBudgetEntry(live,{account_id:demo,description:"Forged",amount:"1",category:"Other",type:"INCOME",date:"2026-10-25"},db)),/NOT_FOUND/);
     });

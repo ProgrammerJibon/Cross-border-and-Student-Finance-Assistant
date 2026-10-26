@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { encryptSecret, decryptSecret } from "../src/lib/secrets";
+import { AppError } from "../src/lib/errors";
+import { decodeGatewayConfig } from "../src/services/gateway-config.service";
 import { hasPermission } from "../src/lib/admin-permissions";
 import { canOpen } from "../src/lib/permissions";
 import { avatarSchema } from "../src/lib/avatar";
@@ -19,6 +21,15 @@ test("stored provider keys use randomized authenticated encryption", () => {
   bytes[0] ^= 1;
   parts[2] = bytes.toString("base64");
   assert.throws(() => decryptSecret(parts.join(".")));
+});
+test("malformed stored gateway configuration returns a handled configuration error", () => {
+  process.env.AI_KEY_ENCRYPTION_SECRET =
+    "test-secret-only-32-characters-long-12345";
+  const cipher = encryptSecret("not-json");
+  assert.throws(
+    () => decodeGatewayConfig(cipher),
+    (error) => error instanceof AppError && error.code === "CHECKOUT_NOT_CONFIGURED",
+  );
 });
 test("moderator sections deny missing, malformed and cross-role permissions", () => {
   const permissions = JSON.stringify(["reports", "catalog"]);

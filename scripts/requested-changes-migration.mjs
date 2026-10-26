@@ -27,8 +27,4 @@ export async function migrateRequestedChanges(db) {
     INDEX(user_id,date), FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(account_id) REFERENCES accounts(id), CHECK(amount>0), CHECK(type IN ('INCOME','EXPENSE'))
   )`);
-  await db.query(`CREATE OR REPLACE VIEW finance_records AS
-    SELECT id,user_id,account_id,amount,currency,type,category,description,notes,date,confidence,created_at,_utf8mb4'LEDGER' COLLATE utf8mb4_unicode_ci record_source FROM transactions
-    UNION ALL
-    SELECT id,user_id,account_id,amount,currency,type,category,description,notes,date,confidence,created_at,_utf8mb4'BUDGET' COLLATE utf8mb4_unicode_ci record_source FROM budget_records`);
 }

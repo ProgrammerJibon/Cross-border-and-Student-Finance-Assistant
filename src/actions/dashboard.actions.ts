@@ -22,6 +22,7 @@ import { hasPermission } from "@/lib/admin-permissions";
 import { canOpen } from "@/lib/permissions";
 import { translator } from "@/lib/i18n";
 import { parseJson } from "@/lib/json";
+import { financeRecordsSource } from "@/lib/finance-records";
 import { checkAndAutoResetDemo } from "@/services/demo-reset.service";
 export async function getDashboardData(scope?: "agent") {
   return action(async () => {
@@ -68,13 +69,13 @@ export async function getDashboardData(scope?: "agent") {
         : [],
       student || user.role === "PARENT"
         ? rows(
-            "SELECT * FROM finance_records WHERE user_id=? ORDER BY date DESC,created_at DESC LIMIT 20",
+            `SELECT * FROM ${financeRecordsSource} WHERE user_id=? ORDER BY date DESC,created_at DESC LIMIT 20`,
             [user.id],
           )
         : [],
       student
         ? rows(
-            "SELECT b.*,COALESCE((SELECT SUM(t.amount) FROM finance_records t WHERE t.user_id=b.user_id AND t.category=b.category AND t.currency=b.currency AND t.type='EXPENSE' AND DATE_FORMAT(t.date,'%Y-%m')=b.month),0) actual FROM budgets b WHERE b.user_id=? AND b.month=DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m')",
+            `SELECT b.*,COALESCE((SELECT SUM(finance_rows.amount) FROM ${financeRecordsSource} WHERE finance_rows.user_id=b.user_id AND finance_rows.category=b.category AND finance_rows.currency=b.currency AND finance_rows.type='EXPENSE' AND DATE_FORMAT(finance_rows.date,'%Y-%m')=b.month),0) actual FROM budgets b WHERE b.user_id=? AND b.month=DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m')`,
             [user.id],
           )
         : [],
@@ -133,13 +134,13 @@ export async function getDashboardData(scope?: "agent") {
         : [],
       student
         ? rows(
-            "SELECT DATE_FORMAT(date,'%Y-%m') month,currency,type,SUM(amount) amount FROM finance_records WHERE user_id=? AND date>=DATE_SUB(UTC_DATE(),INTERVAL 6 MONTH) GROUP BY month,currency,type ORDER BY month",
+            `SELECT DATE_FORMAT(date,'%Y-%m') month,currency,type,SUM(amount) amount FROM ${financeRecordsSource} WHERE user_id=? AND date>=DATE_SUB(UTC_DATE(),INTERVAL 6 MONTH) GROUP BY month,currency,type ORDER BY month`,
             [user.id],
           )
         : [],
       student
         ? rows(
-            "SELECT category,currency,SUM(amount) amount FROM finance_records WHERE user_id=? AND type='EXPENSE' AND DATE_FORMAT(date,'%Y-%m')=DATE_FORMAT(UTC_DATE(),'%Y-%m') GROUP BY category,currency",
+            `SELECT category,currency,SUM(amount) amount FROM ${financeRecordsSource} WHERE user_id=? AND type='EXPENSE' AND DATE_FORMAT(date,'%Y-%m')=DATE_FORMAT(UTC_DATE(),'%Y-%m') GROUP BY category,currency`,
             [user.id],
           )
         : [],
@@ -225,12 +226,12 @@ export async function getDashboardData(scope?: "agent") {
             : [],
           transactions: v.descriptions
             ? await rows(
-                "SELECT description,category,amount,currency,date FROM finance_records WHERE user_id=? ORDER BY date DESC LIMIT 20",
+                `SELECT description,category,amount,currency,date FROM ${financeRecordsSource} WHERE user_id=? ORDER BY date DESC LIMIT 20`,
                 [f.student_id],
               )
             : v.categories
               ? await rows(
-                  "SELECT category,currency,SUM(amount) amount FROM finance_records WHERE user_id=? AND type='EXPENSE' AND date>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01') GROUP BY category,currency",
+                  `SELECT category,currency,SUM(amount) amount FROM ${financeRecordsSource} WHERE user_id=? AND type='EXPENSE' AND date>=DATE_FORMAT(UTC_DATE(),'%Y-%m-01') GROUP BY category,currency`,
                   [f.student_id],
                 )
               : [],
@@ -443,7 +444,7 @@ export async function globalSearch(query: string) {
     if (u.role === "STUDENT")
       for (const [sql, kind] of [
         [
-          "SELECT id,description title FROM finance_records WHERE user_id=? AND description LIKE ? LIMIT 8",
+          `SELECT id,description title FROM ${financeRecordsSource} WHERE user_id=? AND description LIKE ? LIMIT 8`,
           "transactions",
         ],
         [

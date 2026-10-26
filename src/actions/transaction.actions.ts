@@ -7,6 +7,7 @@ import { atomic, rows, write } from "@/lib/db";
 import { action, requireCondition } from "@/lib/errors";
 import { transactionSchema, id } from "@/lib/validation";
 import { audit } from "@/lib/audit";
+import { financeRecordsSource } from "@/lib/finance-records";
 import { checkUsageLimit, incrementUsage } from "@/lib/plan-limits";
 import { checkCategoryLimit } from "@/services/parent-controls.service";
 export async function addTransaction(input: unknown) {
@@ -29,17 +30,24 @@ export async function categorizeTransaction(txId: string, category: string) {
     transactionSchema.shape.category.parse(category);
     await atomic(async (db) => {
       await rows("SELECT id FROM users WHERE id=? FOR UPDATE", [u.id], db);
-      const [tx] = await rows<{
+      let [tx] = await rows<{
         amount: string;
         currency: string;
         date: string;
         type: string;
         record_source: string;
       }>(
-        "SELECT amount,currency,date,type,record_source FROM finance_records WHERE id=? AND user_id=? FOR UPDATE",
+        "SELECT amount,currency,date,type,'LEDGER' AS record_source FROM transactions WHERE id=? AND user_id=? FOR UPDATE",
         [txId, u.id],
         db,
       );
+      if (!tx) {
+        [tx] = await rows(
+          "SELECT amount,currency,date,type,'BUDGET' AS record_source FROM budget_records WHERE id=? AND user_id=? FOR UPDATE",
+          [txId, u.id],
+          db,
+        );
+      }
       requireCondition(tx, "NOT_FOUND");
       if (tx.type === "EXPENSE" && tx.record_source !== "BUDGET")
         await checkCategoryLimit(
@@ -167,14 +175,14 @@ export async function listTransactions(input: unknown) {
       v.to,
     ];
     const data = await rows(
-      "SELECT * FROM finance_records WHERE " +
+      `SELECT * FROM ${financeRecordsSource} WHERE ` +
         where +
         " ORDER BY date DESC,created_at DESC LIMIT 20 OFFSET " +
         v.page * 20,
       args,
     );
     const [count] = await rows<{ total: number }>(
-      "SELECT COUNT(*) total FROM finance_records WHERE " + where,
+      `SELECT COUNT(*) total FROM ${financeRecordsSource} WHERE ` + where,
       args,
     );
     return { rows: data, total: count.total };

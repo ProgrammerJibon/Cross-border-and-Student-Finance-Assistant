@@ -3,9 +3,9 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { action, requireCondition } from "@/lib/errors";
 import { atomic, rows, write } from "@/lib/db";
-import { encryptSecret, decryptSecret } from "@/lib/secrets";
+import { encryptSecret } from "@/lib/secrets";
 import { audit } from "@/lib/audit";
-import { gatewayConfig, type GatewayConfig } from "@/services/gateway-config.service";
+import { decodeGatewayConfig, gatewayConfig, type GatewayConfig } from "@/services/gateway-config.service";
 import { checkoutOrigin, paypal, stripe } from "@/services/checkout-provider.service";
 const environmentSchema = z.enum(["sandbox", "live"]);
 export async function getGatewayOverview() {
@@ -43,7 +43,7 @@ export async function saveGatewaySettings(input: unknown) {
     requireCondition(!u.is_demo, "LIVE_ADMIN_REQUIRED");
     await atomic(async db => {
       const [old] = await rows<{config_cipher: string}>("SELECT config_cipher FROM payment_gateway_config WHERE environment=? FOR UPDATE", [v.environment],db);
-      const config: GatewayConfig = old ? JSON.parse(decryptSecret(old.config_cipher)) : {};
+      const config: GatewayConfig = old ? decodeGatewayConfig(old.config_cipher) : {};
       for (const [k,value] of Object.entries(v)) if(k !== "environment" && value) config[k as keyof GatewayConfig] = value;
       if(config.stripeSecret) z.string().regex(v.environment === "live" ? /^sk_live_/ : /^sk_test_/).parse(config.stripeSecret);
       await write("INSERT INTO payment_gateway_config(environment,config_cipher) VALUES (?,?) ON DUPLICATE KEY UPDATE config_cipher=VALUES(config_cipher)", [v.environment,encryptSecret(JSON.stringify(config))],db);

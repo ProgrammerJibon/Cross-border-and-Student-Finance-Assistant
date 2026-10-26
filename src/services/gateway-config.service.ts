@@ -1,6 +1,9 @@
 import "server-only";
+import { z } from "zod";
 import { rows } from "@/lib/db";
 import { decryptSecret } from "@/lib/secrets";
+import { parseJson } from "@/lib/json";
+import { requireCondition } from "@/lib/errors";
 import { approvalSchema, eligiblePayment } from "@/lib/payment-capabilities";
 export type Environment = "sandbox" | "live";
 export type GatewayConfig = {
@@ -8,6 +11,23 @@ export type GatewayConfig = {
   stripePublishableKey?: string; stripeSecret?: string; stripeWebhookSecret?: string;
   buyerEmail?: string; buyerPassword?: string;
 };
+const gatewayConfigSchema = z.object({
+  paypalClientId: z.string().optional(),
+  paypalSecret: z.string().optional(),
+  paypalWebhookId: z.string().optional(),
+  stripePublishableKey: z.string().optional(),
+  stripeSecret: z.string().optional(),
+  stripeWebhookSecret: z.string().optional(),
+  buyerEmail: z.string().optional(),
+  buyerPassword: z.string().optional(),
+});
+export function decodeGatewayConfig(cipher: string): GatewayConfig {
+  const config = gatewayConfigSchema.safeParse(
+    parseJson<unknown>(decryptSecret(cipher), null),
+  );
+  requireCondition(config.success, "CHECKOUT_NOT_CONFIGURED");
+  return config.data;
+}
 export async function gatewayConfig(environment: Environment): Promise<GatewayConfig> {
   const [saved] = process.env.PAYMENT_CONFIG_SOURCE === "environment" ? [] : await rows<{ config_cipher: string }>("SELECT config_cipher FROM payment_gateway_config WHERE environment=?", [environment]);
   const prefix = environment === "live" ? "LIVE_" : "";
@@ -38,7 +58,7 @@ export async function gatewayConfig(environment: Environment): Promise<GatewayCo
       (environment === "sandbox"
         ? process.env.STRIPE_TEST_WEBHOOK_SECRET
         : process.env.STRIPE_LIVE_WEBHOOK_SECRET),
-    ...(saved ? JSON.parse(decryptSecret(saved.config_cipher)) : {}),
+    ...(saved ? decodeGatewayConfig(saved.config_cipher) : {}),
   };
 }
 export async function gatewayOptions(environment: Environment, context?: {operation: string; customerCountry: string; currency: string}) {

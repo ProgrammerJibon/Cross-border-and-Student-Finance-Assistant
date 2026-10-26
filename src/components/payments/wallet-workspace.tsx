@@ -28,9 +28,8 @@ export function WalletWorkspace({data,mode="payments",compact=false,initialKind=
   const [recipientPage,setRecipientPage]=useState(0);
   const [shortfall,setShortfall]=useState("");
   const [details,setDetails]=useState<{holder:string;identifier:string;reference:string}|null>(null);
-  const [gatewayQuote,setGatewayQuote]=useState<{requestId:string;amount:string;currency:"USD"}|null>(null);
   const updateFunding=(values:Record<string,string>)=>{
-    setForm(values);setKey(crypto.randomUUID());setGatewayQuote(null);setStep(0);setShortfall("");
+    setForm(values);setKey(crypto.randomUUID());setStep(0);setShortfall("");
   };
   const draftStorage=`finance-draft:${data.user.id}:${data.user.is_demo?"DEMO":"LIVE"}`;
   const refresh=useCallback(async()=>{
@@ -64,7 +63,7 @@ export function WalletWorkspace({data,mode="payments",compact=false,initialKind=
   const open=(kind:string,extra:Record<string,string>={})=>{
     const first=ws?.accounts.find(a=>a.id===(initialAccount||search.get("account")))||ws?.accounts[0];
     setForm({account_id:String(first?.id||""),amount:search.get("amount")||"",type:demo?"Gateway":"Manual",method:"STRIPE",holder:data.user.name,identifier:"",reference:"",...extra});
-    setKey(crypto.randomUUID());setGatewayQuote(null);setStep(0);setRecipientPage(0);setError("");setShortfall("");setModal(kind);
+    setKey(crypto.randomUUID());setStep(0);setRecipientPage(0);setError("");setShortfall("");setModal(kind);
   };
   const resume=()=>{try{const saved=JSON.parse(sessionStorage.getItem(draftStorage)||"null");if(saved){setForm({...saved.form,holder:data.user.name,identifier:"",reference:""});setKey(saved.key);setStep(0);setModal(saved.modal);}}catch{}};
   const wallets=(ws?.accounts||[]).map(a=>({value:String(a.id),label:`${a.name} · ${a.currency} · ${a.balance}`}));
@@ -83,7 +82,7 @@ export function WalletWorkspace({data,mode="payments",compact=false,initialKind=
       {ws.receivingAdmin&&<GatewaySettings demo={demo}/>}
       {["STUDENT","PARENT"].includes(data.user.role)&&<>
         <div className="button-group">
-          <button className="button" disabled={!wallets.length} onClick={()=>open("fund")}>{t("addMoney")}</button>
+          <button className="button" disabled={!wallets.length||!demo} onClick={()=>open("fund")}>{t("addMoney")}</button>
           <button className="button" disabled={!wallets.length} onClick={()=>open("send")}>{t("sendInternal")}</button>
           <button className="button secondary" disabled={!wallets.length} onClick={()=>open("withdraw",{method:"UNIONPAY"})}>{t("withdrawMoney")}</button>
           {data.user.role==="STUDENT"&&<button className="button secondary" onClick={()=>open("support")}>{t("requestMoney")}</button>}
@@ -93,7 +92,7 @@ export function WalletWorkspace({data,mode="payments",compact=false,initialKind=
         {search.get("checkout")&&(search.get("cancelled")==="1"?<p role="status">{t("gatewayCancelled")}</p>:<PaymentVerification id={search.get("checkout")!}/>)}
         {search.get("kind")&&<button className="button" onClick={()=>open(search.get("kind")==="TOPUP"?"fund":search.get("kind")==="WITHDRAW"?"withdraw":"send")}>{t("openRequestedFlow")}</button>}
         {compact&&<button className="button secondary" onClick={()=>open(initialKind==="TOPUP"?"fund":initialKind==="WITHDRAW"?"withdraw":"send")}>{t("openRequestedFlow")}</button>}
-        <div className="three-grid">{ws.accounts.map(a=><Card key={String(a.id)}><h3>{a.name} · {a.currency}</h3><p>{t("available")}: {a.balance}</p><p>{t("reservedFunds")}: {a.reserved_balance}</p><button className="text-link" onClick={()=>open("fund",{account_id:String(a.id)})}>{t("addMoney")}</button></Card>)}</div>
+        <div className="three-grid">{ws.accounts.map(a=><Card key={String(a.id)}><h3>{a.name} · {a.currency}</h3><p>{t("available")}: {a.balance}</p><p>{t("reservedFunds")}: {a.reserved_balance}</p><button className="text-link" disabled={!demo} onClick={()=>open("fund",{account_id:String(a.id)})}>{t("addMoney")}</button></Card>)}</div>
         <ProviderPaymentHistory/>
         <Card><h2>{t("eligibleFamily")}</h2>{!ws.family.length&&<p>{t("noEligibleFamily")}</p>}
           {ws.family.map(r=><p key={r.id}>{r.name} · {t(r.role)} · {r.email} <button className="button secondary" onClick={()=>open("send",{recipient_id:r.id,beneficiary_id:""})}>{t("sendInternal")}</button></p>)}
@@ -129,18 +128,12 @@ export function WalletWorkspace({data,mode="payments",compact=false,initialKind=
       {details&&modal==="details"?<><p>{details.holder}</p><p>{details.identifier}</p><p>{details.reference}</p></>:<form onSubmit={async e=>{
         e.preventDefault();if(busy)return;setError("");
         if(modal==="fund"&&form.type==="Gateway") {
-          if(step===0||!gatewayQuote) {
-            const quote=await perform(async()=>{
-              const draft=await prepareTopup({id:key,account_id:form.account_id,amount:form.amount,provider:form.method});
-              if(!draft.success)return draft;
-              const result=await topupOptions(draft.data);
-              return result.success?{success:true as const,data:{requestId:draft.data.requestId,amount:result.data.amount,currency:"USD" as const}}:result;
-            },false);
-            if(quote){setGatewayQuote(quote);setStep(1);}
-          } else {
-            const checkout=await perform(()=>startTopupCheckout({...gatewayQuote,locale}),false);
-            if(checkout)window.location.assign(checkout.url);
-          }
+          const draft=await perform(()=>prepareTopup({id:key,account_id:form.account_id,amount:form.amount,provider:form.method}),false);
+          if(!draft)return;
+          const quote=await perform(()=>topupOptions(draft),false);
+          if(!quote)return;
+          const checkout=await perform(()=>startTopupCheckout({requestId:draft.requestId,amount:quote.amount,currency:quote.currency,environment:quote.environment,locale}),false);
+          if(checkout)window.location.assign(checkout.url);
           return;
         }
         if(["fund","withdraw","send","supportSend"].includes(modal)&&step===0) {
@@ -166,7 +159,7 @@ export function WalletWorkspace({data,mode="payments",compact=false,initialKind=
         </>}
         {modal==="fund"&&<>
           <FormFields fields={[{name:"type",label:"depositType",options:[{value:"Gateway",label:"gateway"},{value:"Manual",label:"Manual"}]}]} values={form} setValues={updateFunding}/>
-          {form.type==="Gateway"?<><FormFields fields={[{name:"method",options:opts(["STRIPE","PAYPAL"])}]} values={form} setValues={updateFunding}/>{demo?<><p>{t("sandboxGatewayHelp")}</p><DemoPaymentCard provider={form.method}/></>:<p role="status">{t("gatewayFundingUnavailable")}</p>}{step===1&&gatewayQuote&&<p className="checkout-total">{t("gatewayQuote")}: {gatewayQuote.amount} USD → {form.amount} {account?.currency}. {t("verifiedFundingOnly")}</p>}</>:step===1&&<>
+          {form.type==="Gateway"?<><FormFields fields={[{name:"method",options:opts(["STRIPE","PAYPAL"])}]} values={form} setValues={updateFunding}/>{demo?<><p>{t("sandboxGatewayHelp")}</p><DemoPaymentCard provider={form.method}/></>:<p role="status">{t("gatewayFundingUnavailable")}</p>}</>:step===1&&<>
             <FormFields fields={[{name:"receiving_account_id",label:"receivingAccounts",options:(ws?.receiving||[]).filter(r=>r.active&&r.currency===account?.currency).map(r=>({value:String(r.id),label:`${r.method} · ${r.holder}`}))}]} values={form} setValues={setForm}/>
             {ws?.receiving.filter(r=>r.id===form.receiving_account_id).map(r=><Card key={String(r.id)}><p>{r.holder}: {r.identifier}</p><p>{r.instructions}</p><p>{r.minimum} – {r.maximum} {r.currency}</p></Card>)}
             <FormFields fields={[{name:"holder",label:"senderName"},{name:"identifier",label:"senderIdentifier"},{name:"reference",label:"transactionId"}]} values={form} setValues={setForm}/><p>{t("manualPendingHelp")}</p>
@@ -178,9 +171,9 @@ export function WalletWorkspace({data,mode="payments",compact=false,initialKind=
         {modal==="beneficiary"&&<><FormFields fields={[{name:"account_id",label:"currency",options:wallets},{name:"query",label:"recipientSearch"},{name:"recipient_id",label:"recipient",options:matches.map(r=>({value:r.id,label:`${r.name} · ${r.role} · ${r.email}`}))}]} values={form} setValues={v=>{setForm(v.query!==form.query?{...v,recipient_id:""}:v);if(v.query!==form.query){setMatches([]);setRecipientPage(0);}}}/><p>{t("discoveryPrivacyHelp")}</p><div className="button-group"><button type="button" className="button secondary" disabled={recipientPage===0} onClick={()=>{setRecipientPage(p=>p-1);setMatches([]);setForm({...form,recipient_id:""});}}>{t("back")}</button><button type="button" className="button secondary" disabled={matches.length<10||recipientPage>=4} onClick={()=>{setRecipientPage(p=>p+1);setMatches([]);setForm({...form,recipient_id:""});}}>{t("next")}</button></div></>}
         {modal==="receiving"&&<FormFields fields={[{name:"method",options:opts(manualMethods)},{name:"holder"},{name:"identifier",label:"recipientAccountId"},{name:"currency"},{name:"instructions",type:"textarea"},{name:"minimum",type:"number"},{name:"maximum",type:"number"},{name:"display_order",type:"number"},{name:"active",options:opts(["0","1"])}]} values={form} setValues={setForm}/>}
         {modal==="evidence"&&<><p>{t("demoEvidenceHelp")}</p><FormFields fields={[{name:"reference",label:"settlementEvidence"},{name:"amount"},{name:"currency"},{name:"settled_at"},{name:"payee_verified",label:"payeeVerified",options:[{value:"0",label:"no"},{value:"1",label:"yes"}]}]} values={form} setValues={setForm}/></>}
-        {step===1&&!(modal==="fund"&&form.type==="Gateway")&&<p>{t("finalConfirmationHelp")} · {account?.name} · {form.amount} {account?.currency} · {modal==="send"?(ws?.family.find(r=>r.id===form.recipient_id)?.name||ws?.beneficiaries.find(r=>r.recipient_id===form.recipient_id)?.name):form.holder||""} · {t("available")}: {account&&D(String(account.balance)).minus(modal==="fund"?0:form.amount||0).toFixed(2)}</p>}
+        {step===1&&<p>{t("finalConfirmationHelp")} · {account?.name} · {form.amount} {account?.currency} · {modal==="send"?(ws?.family.find(r=>r.id===form.recipient_id)?.name||ws?.beneficiaries.find(r=>r.recipient_id===form.recipient_id)?.name):form.holder||""} · {t("available")}: {account&&D(String(account.balance)).minus(modal==="fund"?0:form.amount||0).toFixed(2)}</p>}
         {shortfall&&<div role="alert"><p>{t("shortfall")}: {shortfall} {account?.currency}</p><button type="button" className="button" onClick={fundShortage}>{t("addMoney")}</button></div>}
-        <div className="button-group"><button className="button" disabled={busy||(!demo&&((modal==="fund"&&form.type==="Gateway")||(step===1&&["withdraw","send","supportSend"].includes(modal))))}>{t(modal==="fund"&&form.type==="Gateway"?(step===0?"review":"openProviderCheckout"):step===0&&["fund","withdraw","send","supportSend"].includes(modal)?"next":"confirm")}</button>{step>0&&<button className="button secondary" type="button" disabled={busy} onClick={()=>setStep(0)}>{t("back")}</button>}</div>
+        <div className="button-group"><button className="button" disabled={busy||(!demo&&((modal==="fund"&&form.type==="Gateway")||(step===1&&["withdraw","send","supportSend"].includes(modal))))}>{t(modal==="fund"&&form.type==="Gateway"?"openProviderCheckout":step===0&&["fund","withdraw","send","supportSend"].includes(modal)?"next":"confirm")}</button>{step>0&&<button className="button secondary" type="button" disabled={busy} onClick={()=>setStep(0)}>{t("back")}</button>}</div>
         </fieldset>
       </form>}
     </Modal>}

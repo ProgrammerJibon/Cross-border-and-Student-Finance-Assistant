@@ -30,7 +30,7 @@ async function select(page:Page,scope:Page|Locator,name:string,value:string) {
   await page.getByRole("option",{name:value,exact:true}).click();
 }
 
-test("Add Money opens gateway checkout without automatic credit and notifications remain available",async({page,context})=>{
+test("Add Money offers direct gateway checkout without a review step and notifications remain available",async({page,context})=>{
   test.setTimeout(180000);
   const db=await database(),id=await fixture(db,"STUDENT",1);
   const [old]=await db.execute<mysql.RowDataPacket[]>("SELECT * FROM payment_gateway_config WHERE environment='sandbox'");
@@ -66,19 +66,9 @@ test("Add Money opens gateway checkout without automatic credit and notification
         await dialog.getByRole("button",{name:"Copy card number",exact:true}).click();
         expect(await page.evaluate(()=>navigator.clipboard.readText())).toBe("3714 4963 5398 431");
       }
-      await dialog.getByRole("button",{name:"Review",exact:true}).click();
-      await expect(dialog.locator(".checkout-total")).toBeVisible();
-      const amount=(await dialog.locator(".checkout-total").innerText()).match(/([\d.]+) USD/)![1];
-      const [drafts]=await db.execute<mysql.RowDataPacket[]>("SELECT id FROM financial_requests WHERE user_id=? AND method=? ORDER BY created_at DESC LIMIT 1",[id,provider.toUpperCase()]);
-      // A previously created checkout can be reopened without contacting a provider.
-      const checkoutId=randomUUID(),url=provider==="Stripe"?`https://checkout.stripe.com/c/pay/${checkoutId}`:`https://www.sandbox.paypal.com/checkoutnow?token=${checkoutId}`;
-      await db.execute("INSERT INTO provider_checkouts(id,user_id,plan_id,cycle,provider,amount,currency,environment,purpose,request_id,remote_id,approval_url) VALUES (?,?,'student-free','once',?,?,'USD','sandbox','TOPUP',?,?,?)",[checkoutId,id,provider.toUpperCase(),amount,drafts[0].id,checkoutId,url]);
-      await db.execute("UPDATE financial_requests SET status='PROCESSING' WHERE id=?",[drafts[0].id]);
-      await page.route(url,route=>route.fulfill({contentType:"text/html",body:"<h1>Provider checkout fixture</h1>"}));
-      await dialog.getByRole("button",{name:"Open provider checkout",exact:true}).click();
-      await expect(page).toHaveURL(url);
-      await page.goto(`/en/payments?checkout=${checkoutId}&cancelled=1`);
-      await expect(page.getByText(/Checkout was cancelled\. Returning here does not credit/)).toBeVisible();
+      await expect(dialog.getByRole("button",{name:"Open provider checkout",exact:true})).toBeVisible();
+      await expect(dialog.getByRole("button",{name:"Review",exact:true})).toHaveCount(0);
+      await page.keyboard.press("Escape");
     }
     const [wallets]=await db.execute<mysql.RowDataPacket[]>("SELECT balance FROM accounts WHERE user_id=?",[id]);
     expect(Number(wallets[0].balance)).toBe(100);

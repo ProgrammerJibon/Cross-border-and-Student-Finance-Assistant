@@ -23,6 +23,7 @@ import { checkCategoryLimit } from "./parent-controls.service";
 import { audit, notify } from "@/lib/audit";
 import { checkUsageLimit, incrementUsage } from "@/lib/plan-limits";
 import { hasPermission } from "@/lib/admin-permissions";
+import { parseJson } from "@/lib/json";
 
 type Request = {
   id: string;
@@ -254,12 +255,18 @@ async function validateMethod(r: Request, db: DB) {
     active: number;
     deposit_enabled: number;
     withdrawal_enabled: number;
-    currencies: string;
+    currencies: unknown;
   }>("SELECT * FROM payment_methods WHERE code=?", [r.method], db);
   requireCondition(method?.active, "PAYMENT_METHOD_DISABLED");
+  const currencies = parseJson<unknown>(method.currencies, null);
   requireCondition(
-    JSON.parse(method.currencies).includes(r.currency) &&
-      JSON.parse(method.currencies).includes(r.receive_currency),
+    Array.isArray(currencies) &&
+      currencies.every((currency) => typeof currency === "string"),
+    "PAYMENT_METHOD_DISABLED",
+  );
+  requireCondition(
+    currencies.includes(r.currency) &&
+      currencies.includes(r.receive_currency),
     "UNSUPPORTED_CURRENCY",
   );
   requireCondition(

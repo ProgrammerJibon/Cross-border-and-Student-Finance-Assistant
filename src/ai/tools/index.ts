@@ -29,6 +29,7 @@ import {
 import { canUseAgentTool } from "../tool-policy";
 import type { Role } from "@/types";
 import { getRiskPolicy } from "@/services/financial-config.service";
+import { financeRecordsSource } from "@/lib/finance-records";
 import { eligibleRecipients, discoverRecipients } from "@/services/recipient.service";
 const empty = z.object({}).strict();
 const comparison = z
@@ -167,7 +168,7 @@ export async function runTool(
       case "searchTransactions": {
         const v = toolSchemas.searchTransactions.parse(args);
         const data = await rows(
-          "SELECT id,account_id,description,amount,currency,category,type,date FROM finance_records WHERE user_id=? AND description LIKE ? ORDER BY date DESC,id DESC LIMIT 51 OFFSET " +
+          `SELECT id,account_id,description,amount,currency,category,type,date FROM ${financeRecordsSource} WHERE user_id=? AND description LIKE ? ORDER BY date DESC,id DESC LIMIT 51 OFFSET ` +
             v.page * 50,
           [userId, `%${v.search}%`],
         );
@@ -348,7 +349,7 @@ export async function runTool(
         break;
       case "analyseTransactions":
         output = await rows(
-          "SELECT category,currency,type,SUM(amount) total,COUNT(*) count FROM finance_records WHERE user_id=? AND date>=DATE_SUB(UTC_DATE(),INTERVAL 30 DAY) GROUP BY category,currency,type",
+          `SELECT category,currency,type,SUM(amount) total,COUNT(*) count FROM ${financeRecordsSource} WHERE user_id=? AND date>=DATE_SUB(UTC_DATE(),INTERVAL 30 DAY) GROUP BY category,currency,type`,
           [userId],
         );
         break;
